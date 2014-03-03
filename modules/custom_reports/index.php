@@ -36,7 +36,8 @@ function _moduleContent(&$smarty, $module_name)
 {
     //include module files
     include_once "modules/$module_name/configs/default.conf.php";
-    include_once "modules/$module_name/libs/paloSantoCustom_Reports.class.php";
+    include_once "modules/$module_name/libs/Custom_Reports.class.php";
+    include_once "modules/$module_name/libs/Excel_Xml.php";
 
     //include file language agree to elastix configuration
     //if file language not exists, then include language by default (en)
@@ -81,7 +82,7 @@ function _moduleContent(&$smarty, $module_name)
     }
 */
 
-    //actions
+/*    //actions
     $action = getAction();
     $content = "";
 
@@ -91,11 +92,13 @@ function _moduleContent(&$smarty, $module_name)
             break;
     }
     return $content;
+*/
+    return reportCustom_Reports($smarty, $module_name, $local_templates_dir, $pDB, $arrConf);
 }
 
 function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf)
 {
-    $pCustom_Reports = new paloSantoCustom_Reports($pDB);
+    $pCustom_Reports = new Custom_Reports($pDB);
 
     //Получаем присланные параметры нужные нам
     $campaign_in = getParameter("queue_in");
@@ -103,69 +106,89 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
     $date_start = getParameter("date_start");
     $date_end = getParameter("date_end");
     $span = getParameter("span");
+    $agent = getParameter("agent");
 
     //Параметры для грида
     $oGrid  = new paloSantoGrid($smarty);
-    $oGrid->setTitle(_tr("Custom Reports"));
     $oGrid->pagingShow(false); // не показывать пагинатор.
+    $oGrid->enableExport();    // включить экспорт результатов.
 
-//    $oGrid->enableExport();   // включить экспорт результатов.
-    $oGrid->setNameFile_Export(_tr("Custom Reports"));
+    //begin данные для фильтра
+    $oFilterForm = new paloForm($smarty, createFieldFilter($pCustom_Reports->getCampaignIn(), $pCustom_Reports->getCampaignOut(), $pCustom_Reports->getAgents()));
+    $smarty->assign("show", _tr("Show"));
+    $htmlFilter  = $oFilterForm->fetchForm("$local_templates_dir/filter.tpl","",$_POST);
+    //end данные для фильтра
+
+    $oGrid->showFilter(trim($htmlFilter));
+
+    //    $isExport = $oGrid->isExportAction();
 
     //Добавляем в урл страницы дополнительные параметры
     $url = array(
-        "menu"       =>  $module_name,
+        "menu"      => $module_name,
+        "queue_in"  => $campaign_in,
+        "queue_out" => $campaign_out,
+        "date_start"=> $date_start,
+        "date_end"  => $date_end,
+        "span"      => $span,
+        "agent"     => $agent
     );
-    $oGrid->setURL($url);
-
-    //Столбцы для отображения в гриде
-    $arrColumns = array(_tr("detail"),_tr("total"),_tr("success"),_tr("unsuccessful"),_tr("dialing time"),_tr("connection time"),_tr("total time"),_tr("max time"),_tr("average time"),_tr("cancel call"),);
-    $oGrid->setColumns($arrColumns);
 
     // Передаем параметры фильтра
-    $pCustom_Reports->setParams($campaign_in, $campaign_out, $date_start, $date_end, $span);
+    $pCustom_Reports->setParams($campaign_in, $campaign_out, $date_start, $date_end, $span, $agent);
+
+    //Столбцы для отображения в гриде
+    $Columns = $pCustom_Reports->getColumns_Reports();
+    foreach($Columns as $column){
+        $arrColumns[] = _tr($column);
+    }
 
     // Получаем данные
     $arrResult =$pCustom_Reports->getCustom_Reports();
-
     if(is_array($arrResult)){
-        foreach($arrResult as $key => $value){ 
-	        $arrTmp[0] = str_replace(" ","&nbsp;",$value['details']);
-            $arrTmp[1] = $value['total'];
-	        $arrTmp[2] = $value['success'];
-	        $arrTmp[3] = $value['unsuccessful'];
-	        $arrTmp[4] = $value['dialing_time'];
-	        $arrTmp[5] = $value['connection_time'];
-	        $arrTmp[6] = $value['total_time'];
-	        $arrTmp[7] = $value['max_time'];
-	        $arrTmp[8] = $value['average_time'];
-	        $arrTmp[9] = $value['cancel_call'];
+        foreach($arrResult as $key => $value){
+            $i=0;
+            foreach($Columns as $column){
+                $arrTmp[$i] =  $value[$column];
+                $i++;
+            }
             $arrData[] = $arrTmp;
         }
     }
+
+    $oGrid->setURL($url);
     $oGrid->setData($arrData);
+    $oGrid->setColumns($arrColumns);
+    $oGrid->setTitle(_tr("Custom Reports"));
+    $oGrid->setNameFile_Export(_tr("report"));
 
-    //begin section filter
-    $oFilterForm = new paloForm($smarty, createFieldFilter($pCustom_Reports->getCampaignIn(), $pCustom_Reports->getCampaignOut()));
-    $smarty->assign("show", _tr("Show"));
-    $htmlFilter  = $oFilterForm->fetchForm("$local_templates_dir/filter.tpl","",$_POST);
-    //end section filter
+    // Так как с штатным экспортом отчетов проблема, перехватываем стандартный экспорт и делаем свой...
+    // ToDo Когда наладят можно убрать
+    $file = _tr("report").'_'.date("d-m-Y_H:i:s", time());
+    switch($oGrid->exportType()){
+        case "csv":
+            exportCSV($file, $arrColumns, $arrData);
+            break;
 
-    $oGrid->showFilter(trim($htmlFilter));
-    $content = $oGrid->fetchGrid();
-    //end grid parameters
+        case "xls":
 
-    return $content;
+            exportXLS($file, $arrColumns, $arrData);
+            break;
+
+        default:
+            return $oGrid->fetchGrid();
+            break;
+    }
 }
 
-function createFieldFilter($campaign_in, $campaign_out){
+function createFieldFilter($campaign_in, $campaign_out, $agents){
 
-    $arrCampaign_in = array('' => '('._tr('All').')');
+    $arrCampaign_in = array('0' => '('._tr('No').')', 'all' => '('._tr('All').')');
     foreach ($campaign_in as $oCampaign_in) {
         $arrCampaign_in[$oCampaign_in['id']] = $oCampaign_in['name'];
     }
 
-    $arrCampaign_out = array('' => '('._tr('All').')');
+    $arrCampaign_out = array('0' => '('._tr('No').')', 'all' => '('._tr('All').')');
     foreach ($campaign_out as $oCampaign_out) {
         $arrCampaign_out[$oCampaign_out['id']] = $oCampaign_out['name'];
     }
@@ -176,6 +199,11 @@ function createFieldFilter($campaign_in, $campaign_out){
         'hour'    =>  _tr('Hour'),
         'ring'   =>  _tr('Ring'),
     );
+
+    $arrAgents = array('' => '('._tr('All').')');
+    foreach ($agents as $agent) {
+        $arrAgents[$agent['id']] = $agent['name'];
+    }
 
     $arrFormElements = array(
         "date_start" => array(
@@ -220,11 +248,17 @@ function createFieldFilter($campaign_in, $campaign_out){
             "VALIDATION_TYPE"        => "text",
             "VALIDATION_EXTRA_PARAM" => ""
         ),
-
+        "agent" => array(
+            "LABEL"                  => _tr("Agent"),
+            "REQUIRED"               => "no",
+            "INPUT_TYPE"             => "SELECT",
+            "INPUT_EXTRA_PARAM"      => $arrAgents,
+            "VALIDATION_TYPE"        => "text",
+            "VALIDATION_EXTRA_PARAM" => ""
+        ),
                     );
     return $arrFormElements;
 }
-
 
 function getAction()
 {
@@ -243,4 +277,41 @@ function getAction()
     else
         return "report"; //cancel
 }
+// CSV экспорт --------------------------------------------------------
+function exportCSV($file, $arrColumns, $arrData)
+{
+    header("Content-type: text/csv");
+    header("Content-Disposition: attachment; filename=".$file.".csv");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+
+    $outstream = fopen("php://output", "w");
+    fputcsv($outstream, exportConvert($arrColumns), ';');
+    foreach($arrData as $data){
+        $data = exportConvert($data);
+        fputcsv($outstream, $data,';');
+    }
+    fclose($outstream);
+}
+
+function exportConvert($data, $conv = false)
+{
+    foreach($data as $index => $val){
+        $search  = array("<b>",  "</b>", "&nbsp;");
+        $replace = array("",     "",      " ");
+        $val = str_replace($search, $replace, $val);
+        $data[$index] = $conv?$val:iconv("UTF8", "CP1251", $val);
+    }
+    return $data;
+}
+
+//XSL экспорт
+function exportXLS($file, $arrColumns, $arrData)
+{
+    $phpexcel = new Excel_Xml;
+    array_unshift($arrData, $arrColumns);
+    $phpexcel->addWorksheet(_tr('report'), exportConvert($arrData, true));
+    $phpexcel->sendWorkbook($file.'.xls');
+}
+
 ?>
