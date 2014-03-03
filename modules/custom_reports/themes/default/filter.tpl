@@ -35,5 +35,11 @@
         <td width="12%" align="left" nowrap="nowrap">
             {$queue_out.INPUT}
         </td>
+        <td width="12%" align="right">
+            {$agent.LABEL}:
+        </td>
+        <td width="12%" align="left" nowrap="nowrap">
+            {$agent.INPUT}
+        </td>
     </tr>
 </table>
