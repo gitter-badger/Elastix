@@ -84,6 +84,9 @@ class Custom_Reports{
             case "ring":
                 return array("time","phone","status","duration_wait","duration","agent","campaign");
                 break;
+            case "oncalls":
+                return array("total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
+                break;
             default:
                 return array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
                 break;
@@ -114,6 +117,10 @@ class Custom_Reports{
                 $result = $this->getRingData();
                 break;
 
+            case "oncalls":
+                $result = $this->getOnCalls();
+                break;
+
             default:
                 $res = $this->getRowData();
                 if($res){
@@ -122,6 +129,40 @@ class Custom_Reports{
                 }
                 break;
         }
+
+        return $result;
+    }
+
+    function getOnCalls()
+    {
+        if($this->campaign_in != 'all'){
+            $query_in = "SELECT COUNT(*) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND id_campaign = ?";
+            $params_in = array($this->date_start, $this->date_end, $this->campaign_in);
+        } else {
+            $query_in = "SELECT COUNT(*) FROM call_entry  WHERE (datetime_entry_queue BETWEEN ? AND ?)";
+            $params_in = array($this->date_start, $this->date_end);
+        }
+
+        if($this->campaign_out != 'all'){
+            $query_out = "SELECT COUNT(*) FROM calls WHERE (datetime_entry_queue BETWEEN ? AND ?) AND id_campaign = ?";
+            $params_out = array($this->date_start, $this->date_end, $this->campaign_out);
+        } else {
+            $query_out = "SELECT COUNT(*) FROM calls  WHERE (datetime_entry_queue BETWEEN ? AND ?)";
+            $params_out = array($this->date_start, $this->date_end);
+        }
+
+        $tmp_in = $this->_DB->getFirstRowQuery($query_in,false, $params_in);
+        $tmp_out = $this->_DB->getFirstRowQuery($query_out,false, $params_out);
+        $result[0]["total"] = $tmp_in[0] + $tmp_out[0];
+
+        $result[0]["success"] = 's';
+        $result[0]["unsuccessful"] = 'u';
+        $result[0]["unsuccess_more_5"] = 'um';
+        $result[0]["success_less_20"] = 'sl';
+        $result[0]["sl"] = 'serlev';
+        $result[0]["avg_wait_success"] = 'aws';
+        $result[0]["avg_wait_unsuccess"] = "awu";
+//        echo "<pre>"; print_r($result); echo "</pre>";
 
         return $result;
     }
@@ -169,7 +210,7 @@ class Custom_Reports{
                 $query .= " id_agent = ? AND";
                 array_push($params, $this->agent);
             }
-//            if ($this->campaign_out != 'all' and $this->agent) $query .= "AND";
+
             if ($this->campaign_out != 'all'){
                 $query .= " id_campaign = ? AND";
                 array_push($params, $this->campaign_out);
@@ -217,11 +258,7 @@ class Custom_Reports{
             "duration_wait" => $this->convertSec($totalDurationWait),
             "duration" => $this->convertSec($totalDuration)
         );
-/*
-echo "<pre>".$query;
-print_r($params);
-echo "</pre>";
-*/
+
         return $result;
     }
 

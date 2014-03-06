@@ -194,10 +194,11 @@ function createFieldFilter($campaign_in, $campaign_out, $agents){
     }
 
     $arrSpan = array(
-        ''      =>  '('._tr('All').')',
-        'day'   =>  _tr('Day'),
+        ''        =>  '('._tr('All').')',
+        'day'     =>  _tr('Day'),
         'hour'    =>  _tr('Hour'),
-        'ring'   =>  _tr('Ring'),
+        'ring'    =>  _tr('Ring'),
+        'oncalls' =>  _tr('onCalls'),
     );
 
     $arrAgents = array('' => '('._tr('All').')');
