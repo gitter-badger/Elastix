@@ -171,7 +171,6 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
             break;
 
         case "xls":
-
             exportXLS($file, $arrColumns, $arrData);
             break;
 
