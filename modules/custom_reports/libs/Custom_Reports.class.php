@@ -140,41 +140,41 @@ class Custom_Reports{
             $query_in = "SELECT COUNT(*) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND id_campaign = ?";
             $params_in = array($this->date_start, $this->date_end, $this->campaign_in);
             // Среднее время ожидания удачных
-            $query_in_success_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND id_campaign = ?  AND status IN ('Success', 'ShortCall')";
+            $query_in_success_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND id_campaign = ?  AND  status = 'terminada'";
             // Среднее время ожидания неудачных
-            $query_in_unsuccess_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND id_campaign = ? AND NOT status IN ('Success', 'ShortCall')";
+            $query_in_unsuccess_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND id_campaign = ? AND  status <> 'terminada'";
         } else {
             $query_in = "SELECT COUNT(*) FROM call_entry  WHERE (datetime_entry_queue BETWEEN ? AND ?)";
             $params_in = array($this->date_start, $this->date_end);
             // Среднее время ожидания удачных
-            $query_in_success_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND status IN ('Success', 'ShortCall')";
+            $query_in_success_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND status = 'terminada'";
             // Среднее время ожидания неудачных
-            $query_in_unsuccess_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND NOT status IN ('Success', 'ShortCall')";
+            $query_in_unsuccess_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND status <> 'terminada'";
         }
         // Удачные звонки
-        $query_in_success = $query_in." AND status IN ('Success', 'ShortCall')";
+        $query_in_success = $query_in." AND status = 'terminada'";
         // Неудачные звонки
-        $query_in_unsuccess = $query_in." AND NOT status IN ('Success', 'ShortCall')";
+        $query_in_unsuccess = $query_in." AND status <> 'terminada'";
         // Неудачные с временем ожидания менее 5 сек
-        $query_in_unsuccess_5 = $query_in_unsuccess." AND duration_wait > 5";
+        $query_in_unsuccess_5 = $query_in_unsuccess." AND duration_wait < 5";
         // Удачные с временем ожидания более 20 сек
-        $query_in_success_20 = $query_in_success." AND duration_wait < 20";
+        $query_in_success_20 = $query_in_success." AND duration_wait > 20";
 
 
         if($this->campaign_out != 'all'){
             $query_out = "SELECT COUNT(*) FROM calls WHERE (fecha_llamada BETWEEN ? AND ?) AND id_campaign = ?";
             $params_out = array($this->date_start, $this->date_end, $this->campaign_out);
             // Среднее время ожидания удачных
-            $query_out_success_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (fecha_llamada BETWEEN ? AND ?) AND id_campaign = ?  AND status IN ('Success', 'ShortCall')";
+            $query_out_success_avg = "SELECT AVG (duration_wait) FROM calls WHERE (fecha_llamada BETWEEN ? AND ?) AND id_campaign = ?  AND status IN ('Success', 'ShortCall')";
             // Среднее время ожидания неудачных
-            $query_out_unsuccess_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (fecha_llamada BETWEEN ? AND ?) AND id_campaign = ? AND NOT status IN ('Success', 'ShortCall')";
+            $query_out_unsuccess_avg = "SELECT AVG (duration_wait) FROM calls WHERE (fecha_llamada BETWEEN ? AND ?) AND id_campaign = ? AND NOT status IN ('Success', 'ShortCall')";
         } else {
             $query_out = "SELECT COUNT(*) FROM calls  WHERE (fecha_llamada BETWEEN ? AND ?)";
             $params_out = array($this->date_start, $this->date_end);
             // Среднее время ожидания удачных
-            $query_out_success_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (fecha_llamada BETWEEN ? AND ?) AND status IN ('Success', 'ShortCall')";
+            $query_out_success_avg = "SELECT AVG (duration_wait) FROM calls WHERE (fecha_llamada BETWEEN ? AND ?) AND status IN ('Success', 'ShortCall')";
             // Среднее время ожидания неудачных
-            $query_out_unsuccess_avg = "SELECT AVG (duration_wait) FROM call_entry WHERE (fecha_llamada BETWEEN ? AND ?) AND NOT status IN ('Success', 'ShortCall')";
+            $query_out_unsuccess_avg = "SELECT AVG (duration_wait) FROM calls WHERE (fecha_llamada BETWEEN ? AND ?) AND NOT status IN ('Success', 'ShortCall')";
         }
         // Удачные звонки
         $query_out_success = $query_out." AND status IN ('Success', 'ShortCall')";
@@ -185,6 +185,7 @@ class Custom_Reports{
         // Удачные с временем ожидания более 20 сек
         $query_out_success_20 = $query_out_success." AND duration_wait > 20";
 
+/*
         echo "<pre>
         $query_in\n
         $query_out\n
@@ -200,8 +201,11 @@ class Custom_Reports{
         $query_out_success_avg\n
         $query_in_unsuccess_avg\n
         $query_out_unsuccess_avg\n
-        </pre>"
-        ;
+        ";
+        print_r($params_in);
+        print_r($params_out);
+        echo "</pre>";
+*/
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out,false, $params_out);
@@ -223,15 +227,15 @@ class Custom_Reports{
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_success_20,false, $params_out);
         $result[0]["success_less_20"] = $tmp_in[0] + $tmp_out[0];;
 
-        $result[0]["sl"] = ($result[0]["success_less_20"] / $result[0]["success"]) * 100;
+        $result[0]["sl"] = number_format(($result[0]["success_less_20"] / $result[0]["success"]) * 100, 2, '.', '');
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in_success_avg,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_success_avg,false, $params_out);
-        $result[0]["avg_wait_success"] = $tmp_in[0] + $tmp_out[0];;
+        $result[0]["avg_wait_success"] = number_format($tmp_in[0] + $tmp_out[0], 2, '.', '');
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in_unsuccess_avg,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_unsuccess_avg,false, $params_out);
-        $result[0]["avg_wait_unsuccess"] = $tmp_in[0] + $tmp_out[0];;
+        $result[0]["avg_wait_unsuccess"] = number_format($tmp_in[0] + $tmp_out[0], 2, '.', '');
 
         return $result;
     }
