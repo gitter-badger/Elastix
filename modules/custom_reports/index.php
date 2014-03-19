@@ -100,21 +100,13 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
 {
     $pCustom_Reports = new Custom_Reports($pDB);
 
-    //Получаем присланные параметры нужные нам
-    $campaign_in = getParameter("queue_in");
-    $campaign_out = getParameter("queue_out");
-    $date_start = getParameter("date_start");
-    $date_end = getParameter("date_end");
-    $span = getParameter("span");
-    $agent = getParameter("agent");
-
     //Параметры для грида
     $oGrid  = new paloSantoGrid($smarty);
     $oGrid->pagingShow(false); // не показывать пагинатор.
     $oGrid->enableExport();    // включить экспорт результатов.
 
     //begin данные для фильтра
-    $oFilterForm = new paloForm($smarty, createFieldFilter($pCustom_Reports->getCampaignIn(), $pCustom_Reports->getCampaignOut(), $pCustom_Reports->getAgents()));
+    $oFilterForm = new paloForm($smarty, createFieldFilter($pCustom_Reports->getCampaignIn(), $pCustom_Reports->getCampaignOut(), $pCustom_Reports->getAgents(),$pCustom_Reports->getIvrs()));
     $smarty->assign("show", _tr("Show"));
     $htmlFilter  = $oFilterForm->fetchForm("$local_templates_dir/filter.tpl","",$_POST);
     //end данные для фильтра
@@ -124,18 +116,19 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
     //    $isExport = $oGrid->isExportAction();
 
     //Добавляем в урл страницы дополнительные параметры
-    $url = array(
+    $params = array(
         "menu"      => $module_name,
-        "queue_in"  => $campaign_in,
-        "queue_out" => $campaign_out,
-        "date_start"=> $date_start,
-        "date_end"  => $date_end,
-        "span"      => $span,
-        "agent"     => $agent
+        "queue_in"  => getParameter("queue_in"),
+        "queue_out" => getParameter("queue_out"),
+        "date_start"=> getParameter("date_start"),
+        "date_end"  => getParameter("date_end"),
+        "report"    => getParameter("report"),
+        "agent"     => getParameter("agent"),
+        "ivr"       => getParameter('ivr')
     );
 
-    // Передаем параметры фильтра
-    $pCustom_Reports->setParams($campaign_in, $campaign_out, $date_start, $date_end, $span, $agent);
+    // Передаем параметры фильтру
+    $pCustom_Reports->setParams($params["queue_in"], $params["queue_out"], $params['date_start'], $params['date_end'], $params['report'], $params['agent'], $params['ivr']);
 
     //Столбцы для отображения в гриде
     $Columns = $pCustom_Reports->getColumns_Reports();
@@ -156,7 +149,7 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
         }
     }
 
-    $oGrid->setURL($url);
+    $oGrid->setURL($params);
     $oGrid->setData($arrData);
     $oGrid->setColumns($arrColumns);
     $oGrid->setTitle(_tr("Custom Reports"));
@@ -180,7 +173,7 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
     }
 }
 
-function createFieldFilter($campaign_in, $campaign_out, $agents){
+function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
 
     $arrCampaign_in = array('0' => '('._tr('No').')', 'all' => '('._tr('All').')');
     foreach ($campaign_in as $oCampaign_in) {
@@ -192,17 +185,34 @@ function createFieldFilter($campaign_in, $campaign_out, $agents){
         $arrCampaign_out[$oCampaign_out['id']] = $oCampaign_out['name'];
     }
 
+    $arrReport = array(
+        ''          =>  '('._tr('All').')',
+        'day'       =>  _tr('Day'),
+        'hour'      =>  _tr('Hour'),
+        'ring'      =>  _tr('Ring'),
+        'oncalls'   =>  _tr('onCalls'),
+        'ivrdetail' =>  _tr('IVR Detail'),
+        'ivrcount'  =>  _tr('IVR Count')
+    );
+
     $arrSpan = array(
-        ''        =>  '('._tr('All').')',
-        'day'     =>  _tr('Day'),
-        'hour'    =>  _tr('Hour'),
-        'ring'    =>  _tr('Ring'),
-        'oncalls' =>  _tr('onCalls'),
+        ''          =>  '('._tr('All').')',
+        'day'       =>  _tr('Day'),
+        'hour'      =>  _tr('Hour'),
+        'ring'      =>  _tr('Ring'),
+        'oncalls'   =>  _tr('onCalls'),
+        'ivrdetail' =>  _tr('IVR Detail'),
+        'ivrcount'  =>  _tr('IVR Count')
     );
 
     $arrAgents = array('' => '('._tr('All').')');
     foreach ($agents as $agent) {
         $arrAgents[$agent['id']] = $agent['name'];
+    }
+
+    $arrIvr = array('' => '('._tr('All').')');
+    foreach ($ivrs as $ivr) {
+        $arrIvr[$ivr['ivr_id']] = $ivr['ivr_name'];
     }
 
     $arrFormElements = array(
@@ -240,11 +250,11 @@ function createFieldFilter($campaign_in, $campaign_out, $agents){
             "VALIDATION_TYPE"        => "text",
             "VALIDATION_EXTRA_PARAM" => ""
         ),
-        "span" => array(
-            "LABEL"                  => _tr("Span"),
+        "report" => array(
+            "LABEL"                  => _tr("Report"),
             "REQUIRED"               => "no",
             "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrSpan,
+            "INPUT_EXTRA_PARAM"      => $arrReport,
             "VALIDATION_TYPE"        => "text",
             "VALIDATION_EXTRA_PARAM" => ""
         ),
@@ -256,7 +266,15 @@ function createFieldFilter($campaign_in, $campaign_out, $agents){
             "VALIDATION_TYPE"        => "text",
             "VALIDATION_EXTRA_PARAM" => ""
         ),
-                    );
+        "ivr" => array(
+            "LABEL"                  => _tr("Ivr"),
+            "REQUIRED"               => "no",
+            "INPUT_TYPE"             => "SELECT",
+            "INPUT_EXTRA_PARAM"      => $arrIvr,
+            "VALIDATION_TYPE"        => "text",
+            "VALIDATION_EXTRA_PARAM" => ""
+        ),
+    );
     return $arrFormElements;
 }
 

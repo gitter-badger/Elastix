@@ -41,6 +41,7 @@ $arrLangModule=array(
 "Campaign_out" => "Исх. компания",
 "Agent" => "Агент",
 "Span" => "Интервал",
+"Report" => "Отчет",
 "time" => "Время",
 "phone" => "Телефон",
 "status" => "Статус",

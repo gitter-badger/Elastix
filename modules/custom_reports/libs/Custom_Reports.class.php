@@ -33,8 +33,9 @@ class Custom_Reports{
     var $campaign_out;
     var $date_start;
     var $date_end;
-    var $span;
+    var $report;
     var $agent;
+    var $ivr;
     var $CampaignWhere;
     var $AgentWhere;
 
@@ -58,14 +59,15 @@ class Custom_Reports{
     }
 
     // Установка параметров фильтрации
-    function setParams($campaign_in, $campaign_out, $date_start, $date_end, $span, $agent)
+    function setParams($campaign_in, $campaign_out, $date_start, $date_end, $report, $agent, $ivr)
     {
         $this->campaign_in = $campaign_in;
         $this->campaign_out = $campaign_out;
         $this->date_start = date("Y-m-d H:i:s", strtotime($date_start));
         $this->date_end = date("Y-m-d H:i:s", strtotime($date_end));
-        $this->span = $span;
+        $this->report = $report;
         $this->agent = $agent;
+        $this->ivr = $ivr;
 
         $this->CampaignWhere = $this->buildCampaignWhere();
         $this->AgentWhere = $this->buildAgentWhere();
@@ -73,7 +75,7 @@ class Custom_Reports{
 
     function  getColumns_Reports()
     {
-        switch($this->span)
+        switch($this->report)
         {
             case "hour":
                 return array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
@@ -87,17 +89,24 @@ class Custom_Reports{
             case "oncalls":
                 return array("total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
                 break;
+            case "ivrdetail":
+                return array("ivr_name", "phone", "time", "ivr_time", "key");
+                break;
+            case "ivrcount":
+                return array();
+                break;
             default:
                 return array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
                 break;
         }
     }
+
     // Результаты фильтрации для отображения таблицы
     function getCustom_Reports()
     {
         $result = array();
 
-        switch($this->span)
+        switch($this->report)
         {
             case "hour":
                 $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
@@ -121,6 +130,14 @@ class Custom_Reports{
                 $result = $this->getOnCalls();
                 break;
 
+            case "ivrdetail":
+                $result = $this->getIvrDetail();
+                break;
+
+            case "ivrcount":
+
+                break;
+
             default:
                 $res = $this->getRowData();
                 if($res){
@@ -128,6 +145,30 @@ class Custom_Reports{
                     $result[0] = $res;
                 }
                 break;
+        }
+
+        return $result;
+    }
+
+    // Детально по IVR
+    function getIvrDetail(){
+        $query = "SELECT ivr_name, phone, calldatetime, ivr_datetime, pressed_key FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?)";
+        $params = array($this->date_start, $this->date_end);
+        if($this->ivr != ''){
+            $query .= " AND ivr_id = ?";
+            array_push($params, $this->ivr);
+        }
+
+        $res = $this->_DB->fetchTable($query,true, $params);
+
+        $i = 0;
+        foreach($res as $r){
+            $result[$i]["ivr_name"] = $r['ivr_name'];
+            $result[$i]["phone"] = $r['phone'];
+            $result[$i]["time"] = str_replace(" ", "&nbsp;", date("d.m.y H:i:s",strtotime(date("Y-m-d H:i:s",strtotime($r['calldatetime'])))));
+            $result[$i]["ivr_time"] = str_replace(" ", "&nbsp;", date("d.m.y H:i:s",strtotime(date("Y-m-d H:i:s",strtotime($r['ivr_datetime'])))));
+            $result[$i]["key"] = $r['pressed_key'];
+            $i++;
         }
 
         return $result;
@@ -184,28 +225,6 @@ class Custom_Reports{
         $query_out_unsuccess_5 = $query_out_unsuccess." AND duration_wait < 5";
         // Удачные с временем ожидания более 20 сек
         $query_out_success_20 = $query_out_success." AND duration_wait > 20";
-
-/*
-        echo "<pre>
-        $query_in\n
-        $query_out\n
-        $query_in_success\n
-        $query_out_success\n
-        $query_in_unsuccess\n
-        $query_out_unsuccess\n
-        $query_in_unsuccess_5\n
-        $query_out_unsuccess_5\n
-        $query_in_success_20\n
-        $query_out_success_20\n
-        $query_in_success_avg\n
-        $query_out_success_avg\n
-        $query_in_unsuccess_avg\n
-        $query_out_unsuccess_avg\n
-        ";
-        print_r($params_in);
-        print_r($params_out);
-        echo "</pre>";
-*/
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out,false, $params_out);
@@ -576,6 +595,21 @@ class Custom_Reports{
         return $result;
     }
 
+    //Список IVR с данными
+    function getIvrs()
+    {
+        $query   = "SELECT DISTINCT ivr_id, ivr_name FROM ivr_log";
+        $result=$this->_DB->fetchTable($query, true);
+
+        if($result==FALSE){
+            $this->errMsg = $this->_DB->errMsg;
+            return array();
+        }
+
+        return $result;
+    }
+
+    //Перевод секунд в человеческий вид
     function convertSec($sec)
     {
         if ($sec <= 0)
