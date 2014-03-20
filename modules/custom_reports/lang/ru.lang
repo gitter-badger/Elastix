@@ -36,6 +36,7 @@ $arrLangModule=array(
 "Day" => "День",
 "Hour" => "Час",
 "Ring" => "Звонок",
+"Calls" => "Звонки",
 "onCalls" => "По звонкам",
 "Campaign_in" => "Вх. компания",
 "Campaign_out" => "Исх. компания",

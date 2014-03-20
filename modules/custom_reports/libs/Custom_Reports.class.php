@@ -38,6 +38,7 @@ class Custom_Reports{
     var $ivr;
     var $CampaignWhere;
     var $AgentWhere;
+    var $action;
 
     function Custom_Reports(&$pDB)
     {
@@ -59,13 +60,14 @@ class Custom_Reports{
     }
 
     // Установка параметров фильтрации
-    function setParams($campaign_in, $campaign_out, $date_start, $date_end, $report, $agent, $ivr)
+    function setParams($campaign_in, $campaign_out, $date_start, $date_end, $report, $span, $agent, $ivr)
     {
         $this->campaign_in = $campaign_in;
         $this->campaign_out = $campaign_out;
         $this->date_start = date("Y-m-d H:i:s", strtotime($date_start));
         $this->date_end = date("Y-m-d H:i:s", strtotime($date_end));
         $this->report = $report;
+        $this->span = $span;
         $this->agent = $agent;
         $this->ivr = $ivr;
 
@@ -75,75 +77,114 @@ class Custom_Reports{
 
     function  getColumns_Reports()
     {
-        switch($this->report)
-        {
-            case "hour":
-                return array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
+        $result = false;
+        switch($this->report){
+            case 'calls':
+                switch($this->span)
+                {
+                    case "hour":
+                        $result = array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
+                        $this->action = 'calls_hour';
+                        break;
+                    case "day":
+                        $result = array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
+                        $this->action = 'calls_day';
+                        break;
+                    case "ring":
+                        $result = array("time","phone","status","duration_wait","duration","agent","campaign");
+                        $this->action = 'calls_ring';
+                        break;
+                    default:
+                        $result = array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
+                        $this->action = 'calls_default';
+                        break;
+                }
                 break;
-            case "day":
-                return array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
+
+            case 'oncalls':
+                        $result = array("total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
+                        $this->action = 'oncalls';
                 break;
-            case "ring":
-                return array("time","phone","status","duration_wait","duration","agent","campaign");
-                break;
-            case "oncalls":
-                return array("total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
-                break;
-            case "ivrdetail":
-                return array("ivr_name", "phone", "time", "ivr_time", "key");
-                break;
-            case "ivrcount":
-                return array();
-                break;
-            default:
-                return array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
+
+            case 'ivr':
+                switch($this->span)
+                {
+                    case 'hour':
+                        $result = array();
+                        $this->action = 'ivr_hour';
+                        break;
+                    case 'day':
+                        $result = array();
+                        $this->action = 'ivr_day';
+                        break;
+                    case 'ring':
+                        $result = array("ivr_name", "phone", "time", "ivr_time", "key");
+                        $this->action = 'ivr_ring';
+                        break;
+                    default:
+                        $result = array();
+                        $this->action = 'ivr_default';
+                        break;
+                }
                 break;
         }
+
+        return $result;
     }
 
     // Результаты фильтрации для отображения таблицы
     function getCustom_Reports()
     {
-        $result = array();
+        $result = false;
 
-        switch($this->report)
+        switch($this->action)
         {
-            case "hour":
+            case "calls_hour":
                 $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
                 $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
                 $result = $this->getPeriodData(3600,"d.m.y H:i");
                 break;
 
-            case "day":
+            case "calls_day":
                 $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))."00:00:00"));
                 $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
                 $result = $this->getPeriodData(86400,"d.m.y");
                 break;
 
-            case "ring":
+            case "calls_ring":
                 $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H:i",strtotime($this->date_start)).":00"));
                 $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H:i",strtotime($this->date_end)).":00"));
                 $result = $this->getRingData();
+                break;
+
+            case 'calls_default':
+                $res = $this->getRowData();
+                if($res){
+                    $res['time'] = str_replace(" ","&nbsp;",date("d.m.y H:i", strtotime($this->date_start))." - ".date("d.m.y H:i", strtotime($this->date_end)));
+                    $result[0] = $res;
+                }
                 break;
 
             case "oncalls":
                 $result = $this->getOnCalls();
                 break;
 
-            case "ivrdetail":
+
+            case "ivr_hour":
+
+                break;
+
+            case "ivr_day":
+
+                break;
+
+            case "ivr_ring":
                 $result = $this->getIvrDetail();
                 break;
 
-            case "ivrcount":
 
-                break;
+            case "ivr_default":
 
-            default:
-                $res = $this->getRowData();
-                if($res){
-                    $res['time'] = str_replace(" ","&nbsp;",date("d.m.y H:i", strtotime($this->date_start))." - ".date("d.m.y H:i", strtotime($this->date_end)));
-                    $result[0] = $res;
-                }
                 break;
         }
 

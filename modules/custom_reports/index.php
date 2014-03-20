@@ -123,12 +123,13 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
         "date_start"=> getParameter("date_start"),
         "date_end"  => getParameter("date_end"),
         "report"    => getParameter("report"),
+        "span"      => getParameter("span"),
         "agent"     => getParameter("agent"),
         "ivr"       => getParameter('ivr')
     );
 
     // Передаем параметры фильтру
-    $pCustom_Reports->setParams($params["queue_in"], $params["queue_out"], $params['date_start'], $params['date_end'], $params['report'], $params['agent'], $params['ivr']);
+    $pCustom_Reports->setParams($params["queue_in"], $params["queue_out"], $params['date_start'], $params['date_end'], $params['report'], $params['span'], $params['agent'], $params['ivr']);
 
     //Столбцы для отображения в гриде
     $Columns = $pCustom_Reports->getColumns_Reports();
@@ -186,13 +187,9 @@ function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
     }
 
     $arrReport = array(
-        ''          =>  '('._tr('All').')',
-        'day'       =>  _tr('Day'),
-        'hour'      =>  _tr('Hour'),
-        'ring'      =>  _tr('Ring'),
+        'calls'          =>  _tr('Calls'),
         'oncalls'   =>  _tr('onCalls'),
-        'ivrdetail' =>  _tr('IVR Detail'),
-        'ivrcount'  =>  _tr('IVR Count')
+        'ivr' =>  _tr('IVR'),
     );
 
     $arrSpan = array(
@@ -200,9 +197,6 @@ function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
         'day'       =>  _tr('Day'),
         'hour'      =>  _tr('Hour'),
         'ring'      =>  _tr('Ring'),
-        'oncalls'   =>  _tr('onCalls'),
-        'ivrdetail' =>  _tr('IVR Detail'),
-        'ivrcount'  =>  _tr('IVR Count')
     );
 
     $arrAgents = array('' => '('._tr('All').')');
@@ -255,6 +249,14 @@ function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
             "REQUIRED"               => "no",
             "INPUT_TYPE"             => "SELECT",
             "INPUT_EXTRA_PARAM"      => $arrReport,
+            "VALIDATION_TYPE"        => "text",
+            "VALIDATION_EXTRA_PARAM" => ""
+        ),
+        "span" => array(
+            "LABEL"                  => _tr("Span"),
+            "REQUIRED"               => "no",
+            "INPUT_TYPE"             => "SELECT",
+            "INPUT_EXTRA_PARAM"      => $arrSpan,
             "VALIDATION_TYPE"        => "text",
             "VALIDATION_EXTRA_PARAM" => ""
         ),
