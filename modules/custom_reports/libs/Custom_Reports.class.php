@@ -110,11 +110,11 @@ class Custom_Reports{
                 switch($this->span)
                 {
                     case 'hour':
-                        $result = array();
+                        $result = array("time", "'s'", "'i'", "'t'", "'*'", "'#'", "'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'");
                         $this->action = 'ivr_hour';
                         break;
                     case 'day':
-                        $result = array();
+                        $result = array("time", "'s'", "'i'", "'t'", "'*'", "'#'", "'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'");
                         $this->action = 'ivr_day';
                         break;
                     case 'ring':
@@ -122,7 +122,8 @@ class Custom_Reports{
                         $this->action = 'ivr_ring';
                         break;
                     default:
-                        $result = array();
+                        // Эта фишка с кавычками необходима для отображения символа "s", он режется транслэйтером эластикса
+                        $result = array("time", "'s'", "'i'", "'t'", "'*'", "'#'", "'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'");
                         $this->action = 'ivr_default';
                         break;
                 }
@@ -158,7 +159,7 @@ class Custom_Reports{
                 break;
 
             case 'calls_default':
-                $res = $this->getRowData();
+                $res = $this->getCallsData();
                 if($res){
                     $res['time'] = str_replace(" ","&nbsp;",date("d.m.y H:i", strtotime($this->date_start))." - ".date("d.m.y H:i", strtotime($this->date_end)));
                     $result[0] = $res;
@@ -169,22 +170,26 @@ class Custom_Reports{
                 $result = $this->getOnCalls();
                 break;
 
-
             case "ivr_hour":
-
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
+                $result = $this->getPeriodData(3600,"d.m.y H:i",false);
                 break;
 
             case "ivr_day":
-
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))."00:00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
+                $result = $this->getPeriodData(86400,"d.m.y",false);
                 break;
 
             case "ivr_ring":
                 $result = $this->getIvrDetail();
                 break;
 
-
             case "ivr_default":
-
+                $res = $this->getIvrData();
+                $res['time'] = str_replace(" ","&nbsp;",date("d.m.y H:i", strtotime($this->date_start))." - ".date("d.m.y H:i", strtotime($this->date_end)));
+                $result[0] = $res;
                 break;
         }
 
@@ -215,6 +220,7 @@ class Custom_Reports{
         return $result;
     }
 
+    // Отчет по звонкам с сервислевелом
     function getOnCalls()
     {
         if($this->campaign_in != 'all'){
@@ -300,6 +306,7 @@ class Custom_Reports{
         return $result;
     }
 
+    // Отчет по звонкам с точностью до звонка
     function getRingData()
     {
         $query = "
@@ -394,7 +401,8 @@ class Custom_Reports{
         return $result;
     }
 
-    function getPeriodData($period,$format)
+    // Отчет бьющий общий отчет на заданные периоды.Этакий хак с манипуляциями дат начала и конца периода.
+    function getPeriodData($period,$format,$calls = true)
     {
         $date_start = strtotime($this->date_start);
         $date_end = strtotime($this->date_end);
@@ -407,7 +415,12 @@ class Custom_Reports{
         while($date_start <= $date_end){
             $this->date_start = date("Y-m-d H:i:s",$date_start);
             $this->date_end = date("Y-m-d H:i:s", ($date_start += $period)-1);
-            $res = $this->getRowData();
+
+            if ($calls)
+                $res = $this->getCallsData();
+            else
+                $res = $this->getIvrData();
+
             if ($res) {
                 $res['time'] = str_replace(" ","&nbsp;",date($format, strtotime($this->date_start)));
                 $result[] = $res;
@@ -416,14 +429,35 @@ class Custom_Reports{
 
         $this->date_start = date("Y-m-d H:i:s",$sum_start);
         $this->date_end = date("Y-m-d H:i:s", $sum_end);
-        $sum = $this->getRowData();
+        if ($calls)
+            $sum = $this->getCallsData();
+        else
+            $sum = $this->getIvrData();
         $sum['time'] = '<b>'._tr("Total").'</b>';
         $result[] = $sum;
 
         return $result;
     }
 
-    function getRowData()
+    // Общий отчет по IVR за период
+    function getIvrData(){
+        $pads = array('s', 'i', 't', '*', '#', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+        foreach($pads as $pad){
+            $query = "SELECT COUNT(*) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND pressed_key = ?";
+            $params = array($this->date_start, $this->date_end, $pad);
+            if($this->ivr != ''){
+                $query .= " AND ivr_id = ?";
+                array_push($params, $this->ivr);
+            }
+            $res = $this->_DB->getFirstRowQuery($query,false, $params);
+            // Эта фишка с кавычками необходима для отображения символа "s", он режется транслэйтером эластикса
+            $result["'$pad'"] = $res[0];
+        }
+        return $result;
+    }
+
+    // Общий отчет по звонкам за период
+    function getCallsData()
     {
         $res = false;
         $result = false;
@@ -467,6 +501,7 @@ class Custom_Reports{
         return $result;
     }
 
+    // Вспомогательная функция считающая статусы за период
     function getCountStatus($status, $unique=false)
     {
         if(isset($this->date_start) & $this->date_start != "" & isset($this->date_end) & $this->date_end != ""){
@@ -556,6 +591,7 @@ class Custom_Reports{
 
     }
 
+    // Билдер where по компаниям sql запросов для некоторых функций отчетов по звонкам, который я вынес, чтобы не повторять одно и тоже.
     function buildCampaignWhere()
     {
         $params = array();
@@ -584,6 +620,7 @@ class Custom_Reports{
 
     }
 
+    // Так же как по компаниям, билдер по агентам
     function buildAgentWhere()
     {
         if($this->agent){
@@ -622,7 +659,7 @@ class Custom_Reports{
         return $result;
     }
 
-    //Список агентов
+    // Список агентов
     function getAgents()
     {
         $query   = "SELECT id, name FROM agent";
@@ -636,7 +673,7 @@ class Custom_Reports{
         return $result;
     }
 
-    //Список IVR с данными
+    // Список IVR с данными
     function getIvrs()
     {
         $query   = "SELECT DISTINCT ivr_id, ivr_name FROM ivr_log";
@@ -650,7 +687,7 @@ class Custom_Reports{
         return $result;
     }
 
-    //Перевод секунд в человеческий вид
+    // Перевод секунд в человеческий вид
     function convertSec($sec)
     {
         if ($sec <= 0)
@@ -658,5 +695,4 @@ class Custom_Reports{
         else
           return str_pad((int)($sec/3600),2,'0',STR_PAD_LEFT)._tr("h").str_pad(($sec/60 % 60),2,'0',STR_PAD_LEFT)._tr("m"). str_pad(($sec%60),2,'0',STR_PAD_LEFT)._tr("s");
     }
-
 }
