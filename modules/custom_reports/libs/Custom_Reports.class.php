@@ -75,6 +75,64 @@ class Custom_Reports{
         $this->AgentWhere = $this->buildAgentWhere();
     }
 
+
+    // Список входящих компаний
+    function getCampaignIn()
+    {
+        $query   = "SELECT id, name FROM campaign_entry";
+        $result=$this->_DB->fetchTable($query, true);
+
+        if($result==FALSE){
+            $this->errMsg = $this->_DB->errMsg;
+            return array();
+        }
+
+        return $result;
+    }
+
+    // Список исходящих компаний
+    function getCampaignOut()
+    {
+        $query   = "SELECT id, name FROM campaign";
+        $result=$this->_DB->fetchTable($query, true);
+
+        if($result==FALSE){
+            $this->errMsg = $this->_DB->errMsg;
+            return array();
+        }
+
+        return $result;
+    }
+
+    // Список агентов
+    function getAgents()
+    {
+        $query   = "SELECT id, name FROM agent";
+        $result=$this->_DB->fetchTable($query, true);
+
+        if($result==FALSE){
+            $this->errMsg = $this->_DB->errMsg;
+            return array();
+        }
+
+        return $result;
+    }
+
+    // Список IVR с данными
+    function getIvrs()
+    {
+        $query   = "SELECT DISTINCT ivr_id, ivr_name FROM ivr_log";
+        $result=$this->_DB->fetchTable($query, true);
+
+        if($result==FALSE){
+            $this->errMsg = $this->_DB->errMsg;
+            return array();
+        }
+
+        return $result;
+    }
+
+    // Список колонок для заданного отчета
     function  getColumns_Reports()
     {
         $result = false;
@@ -195,6 +253,78 @@ class Custom_Reports{
         return $result;
     }
 
+// **************************  Здесь начинаются функции для выбора данных **********************************************
+
+    // Отчет бьющий общий отчет на заданные периоды.Этакий хак с манипуляциями дат начала и конца периода.
+    function getPeriodData()
+    {
+        switch($this->span)
+        {
+            case "hour":
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
+                $format ="d.m.y H:i";
+                break;
+
+            case "day":
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 00:00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
+                $format = "d.m.y";
+                break;
+
+            case "mon":
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m",strtotime($this->date_start))."-1 00:00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m",strtotime($this->date_end)).'-'.date("t",strtotime($this->date_end))." 23:59:59"));
+                $format = "m.y";
+                break;
+        }
+
+        $date_start = strtotime($this->date_start);
+        $date_end = strtotime($this->date_end);
+
+        $sum_start = $date_start;
+        $sum_end = $date_end;
+
+        $sum = array();
+
+        while($date_start <= $date_end){
+            $this->date_start = date("Y-m-d H:i:s",$date_start);
+
+            switch($this->span)
+            {
+                case 'hour':
+                    $this->date_end = date("Y-m-d H:i:s", ($date_start += 3600)-1);
+                    break;
+                case 'day':
+                    $this->date_end = date("Y-m-d H:i:s", ($date_start += 86400)-1);
+                    break;
+                case 'mon';
+                    $this->date_end = date("Y-m-d H:i:s", ($date_start += date('t',$date_start)*86400)-1);
+                    break;
+            }
+
+            $this->date_end = date("Y-m-d H:i:s", $date_start-1);
+
+            if ($this->report == 'calls') $res = $this->getCallsData();
+            if ($this->report == 'oncalls') $res = $this->getOnCalls();
+            if ($this->report == 'ivr') $res = $this->getIvrData();
+            if ($res) {
+                $res['time'] = str_replace(" ","&nbsp;",date($format, strtotime($this->date_start)));
+                $result[] = $res;
+            }
+        }
+        $this->date_start = date("Y-m-d H:i:s",$sum_start);
+        $this->date_end = date("Y-m-d H:i:s", $sum_end);
+        if ($this->report == 'calls') $sum = $this->getCallsData();
+        if ($this->report == 'oncalls') $sum = $this->getOnCalls();
+        if ($this->report == 'ivr') $sum = $this->getIvrData();
+        $sum['time'] = '<b>'._tr("Total").'</b>';
+        $result[] = $sum;
+
+        return $result;
+    }
+
+// ******************************* Отчеты отдающие по строке за заданный период ****************************************
     // Детально по IVR
     function getIvrDetail(){
         $query = "SELECT ivr_name, phone, calldatetime, ivr_datetime, pressed_key FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?)";
@@ -400,108 +530,6 @@ class Custom_Reports{
         return $result;
     }
 
-    // Отчет бьющий общий отчет на заданные периоды.Этакий хак с манипуляциями дат начала и конца периода.
-    function getPeriodData()
-    {
-        switch($this->span)
-        {
-            case "hour":
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
-                $format ="d.m.y H:i";
-                break;
-
-            case "day":
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 00:00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
-                $format = "d.m.y";
-                break;
-
-            case "mon":
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m",strtotime($this->date_start))."-1 00:00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m",strtotime($this->date_end)).'-'.date("t",strtotime($this->date_end))." 23:59:59"));
-                $format = "m.y";
-                break;
-        }
-
-        $date_start = strtotime($this->date_start);
-        $date_end = strtotime($this->date_end);
-
-        $sum_start = $date_start;
-        $sum_end = $date_end;
-
-        $sum = array();
-
-        while($date_start <= $date_end){
-            $this->date_start = date("Y-m-d H:i:s",$date_start);
-
-            switch($this->span)
-            {
-                case 'hour':
-                    $this->date_end = date("Y-m-d H:i:s", ($date_start += 3600)-1);
-                    break;
-                case 'day':
-                    $this->date_end = date("Y-m-d H:i:s", ($date_start += 86400)-1);
-                    break;
-                case 'mon';
-                    $this->date_end = date("Y-m-d H:i:s", ($date_start += date('t',$date_start)*86400)-1);
-                    break;
-            }
-
-            $this->date_end = date("Y-m-d H:i:s", $date_start-1);
-
-            if ($this->report == 'calls') $res = $this->getCallsData();
-            if ($this->report == 'oncalls') $res = $this->getOnCalls();
-            if ($this->report == 'ivr') $res = $this->getIvrData();
-            if ($res) {
-                $res['time'] = str_replace(" ","&nbsp;",date($format, strtotime($this->date_start)));
-                $result[] = $res;
-            }
-        }
-        $this->date_start = date("Y-m-d H:i:s",$sum_start);
-        $this->date_end = date("Y-m-d H:i:s", $sum_end);
-//        if ($this->report == 'calls') $sum = $this->getCallsData();
-//        if ($this->report == 'oncalls') $sum = $this->getOnCalls();
-//        if ($this->report == 'ivr') $sum = $this->getIvrData();
-        $sum['time'] = '<b>'._tr("Total").'</b>';
-        $result[] = $sum;
-
-        return $result;
-    }
-
-/*    function getPeriodData($period,$format)
-    {
-        $date_start = strtotime($this->date_start);
-        $date_end = strtotime($this->date_end);
-
-        $sum_start = $date_start;
-        $sum_end = $date_end;
-
-        $sum = array();
-
-        while($date_start <= $date_end){
-            $this->date_start = date("Y-m-d H:i:s",$date_start);
-            $this->date_end = date("Y-m-d H:i:s", ($date_start += $period)-1);
-
-            if ($this->report == 'calls') $res = $this->getCallsData();
-            if ($this->report == 'oncalls') $res = $this->getOnCalls();
-            if ($this->report == 'ivr') $res = $this->getIvrData();
-            if ($res) {
-                $res['time'] = str_replace(" ","&nbsp;",date($format, strtotime($this->date_start)));
-                $result[] = $res;
-            }
-        }
-        $this->date_start = date("Y-m-d H:i:s",$sum_start);
-        $this->date_end = date("Y-m-d H:i:s", $sum_end);
-        if ($this->report == 'calls') $sum = $this->getCallsData();
-        if ($this->report == 'oncalls') $sum = $this->getOnCalls();
-        if ($this->report == 'ivr') $sum = $this->getIvrData();
-        $sum['time'] = '<b>'._tr("Total").'</b>';
-        $result[] = $sum;
-
-        return $result;
-    }
-*/
     // Отчет бьющий общий отчет на месяца
     function getMounthData(){
         date("t", strtotime("10 February 2004")); // количество дней в месяце
@@ -660,6 +688,8 @@ class Custom_Reports{
 
     }
 
+// ***************************** Вспомогательные функции ***************************************************************
+
     // Билдер where по компаниям sql запросов для некоторых функций отчетов по звонкам, который я вынес, чтобы не повторять одно и тоже.
     function buildCampaignWhere()
     {
@@ -699,62 +729,6 @@ class Custom_Reports{
         } else return array('where' => '');
     }
 
-
-    // Список входящих компаний
-    function getCampaignIn()
-    {
-        $query   = "SELECT id, name FROM campaign_entry";
-        $result=$this->_DB->fetchTable($query, true);
-
-        if($result==FALSE){
-            $this->errMsg = $this->_DB->errMsg;
-            return array();
-        }
-
-        return $result;
-    }
-
-    // Список исходящих компаний
-    function getCampaignOut()
-    {
-        $query   = "SELECT id, name FROM campaign";
-        $result=$this->_DB->fetchTable($query, true);
-
-        if($result==FALSE){
-            $this->errMsg = $this->_DB->errMsg;
-            return array();
-        }
-
-        return $result;
-    }
-
-    // Список агентов
-    function getAgents()
-    {
-        $query   = "SELECT id, name FROM agent";
-        $result=$this->_DB->fetchTable($query, true);
-
-        if($result==FALSE){
-            $this->errMsg = $this->_DB->errMsg;
-            return array();
-        }
-
-        return $result;
-    }
-
-    // Список IVR с данными
-    function getIvrs()
-    {
-        $query   = "SELECT DISTINCT ivr_id, ivr_name FROM ivr_log";
-        $result=$this->_DB->fetchTable($query, true);
-
-        if($result==FALSE){
-            $this->errMsg = $this->_DB->errMsg;
-            return array();
-        }
-
-        return $result;
-    }
 
     // Перевод секунд в человеческий вид
     function convertSec($sec)
