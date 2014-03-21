@@ -102,8 +102,21 @@ class Custom_Reports{
                 break;
 
             case 'oncalls':
-                        $result = array("total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
-                        $this->action = 'oncalls';
+                switch($this->span)
+                {
+                    case 'hour':
+                        $result = array("time", "total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
+                        $this->action = 'oncalls_hour';
+                        break;
+                    case 'day':
+                        $result = array("time", "total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
+                        $this->action = 'oncalls_day';
+                        break;
+                    default:
+                        $result = array("time", "total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
+                        $this->action = 'oncalls_default';
+                        break;
+                }
                 break;
 
             case 'ivr':
@@ -166,20 +179,34 @@ class Custom_Reports{
                 }
                 break;
 
-            case "oncalls":
-                $result = $this->getOnCalls();
+            case 'oncalls_hour':
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
+                $result = $this->getPeriodData(3600,"d.m.y H:i");
+                break;
+
+            case 'oncalls_day':
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))."00:00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
+                $result = $this->getPeriodData(86400,"d.m.y");
+                break;
+
+            case "oncalls_default":
+                $res = $this->getOnCalls();
+                $res['time'] = str_replace(" ","&nbsp;",date("d.m.y H:i", strtotime($this->date_start))." - ".date("d.m.y H:i", strtotime($this->date_end)));
+                $result[0] = $res;
                 break;
 
             case "ivr_hour":
                 $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
                 $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
-                $result = $this->getPeriodData(3600,"d.m.y H:i",false);
+                $result = $this->getPeriodData(3600,"d.m.y H:i");
                 break;
 
             case "ivr_day":
                 $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))."00:00:00"));
                 $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
-                $result = $this->getPeriodData(86400,"d.m.y",false);
+                $result = $this->getPeriodData(86400,"d.m.y");
                 break;
 
             case "ivr_ring":
@@ -275,33 +302,33 @@ class Custom_Reports{
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out,false, $params_out);
-        $result[0]["total"] = $tmp_in[0] + $tmp_out[0];
+        $result["total"] = $tmp_in[0] + $tmp_out[0];
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in_success,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_success,false, $params_out);
-        $result[0]["success"] = $tmp_in[0] + $tmp_out[0];
+        $result["success"] = $tmp_in[0] + $tmp_out[0];
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in_unsuccess,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_unsuccess,false, $params_out);
-        $result[0]["unsuccessful"] = $tmp_in[0] + $tmp_out[0];
+        $result["unsuccessful"] = $tmp_in[0] + $tmp_out[0];
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in_unsuccess_5,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_unsuccess_5,false, $params_out);
-        $result[0]["unsuccess_more_5"] = $tmp_in[0] + $tmp_out[0];;
+        $result["unsuccess_more_5"] = $tmp_in[0] + $tmp_out[0];;
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in_success_20,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_success_20,false, $params_out);
-        $result[0]["success_less_20"] = $tmp_in[0] + $tmp_out[0];;
+        $result["success_less_20"] = $tmp_in[0] + $tmp_out[0];;
 
-        $result[0]["sl"] = number_format(($result[0]["success_less_20"] / $result[0]["success"]) * 100, 2, '.', '');
+        $result["sl"] = number_format(($result[0]["success_less_20"] / $result[0]["success"]) * 100, 2, '.', '');
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in_success_avg,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_success_avg,false, $params_out);
-        $result[0]["avg_wait_success"] = number_format($tmp_in[0] + $tmp_out[0], 2, '.', '');
+        $result["avg_wait_success"] = $this->convertSec($tmp_in[0] + $tmp_out[0]);
 
         $tmp_in = $this->_DB->getFirstRowQuery($query_in_unsuccess_avg,false, $params_in);
         $tmp_out = $this->_DB->getFirstRowQuery($query_out_unsuccess_avg,false, $params_out);
-        $result[0]["avg_wait_unsuccess"] = number_format($tmp_in[0] + $tmp_out[0], 2, '.', '');
+        $result["avg_wait_unsuccess"] = $this->convertSec($tmp_in[0] + $tmp_out[0]);
 
         return $result;
     }
@@ -402,7 +429,7 @@ class Custom_Reports{
     }
 
     // Отчет бьющий общий отчет на заданные периоды.Этакий хак с манипуляциями дат начала и конца периода.
-    function getPeriodData($period,$format,$calls = true)
+    function getPeriodData($period,$format)
     {
         $date_start = strtotime($this->date_start);
         $date_end = strtotime($this->date_end);
@@ -416,28 +443,30 @@ class Custom_Reports{
             $this->date_start = date("Y-m-d H:i:s",$date_start);
             $this->date_end = date("Y-m-d H:i:s", ($date_start += $period)-1);
 
-            if ($calls)
-                $res = $this->getCallsData();
-            else
-                $res = $this->getIvrData();
-
+            if ($this->report == 'calls') $res = $this->getCallsData();
+            if ($this->report == 'oncalls') $res = $this->getOnCalls();
+            if ($this->report == 'ivr') $res = $this->getIvrData();
             if ($res) {
                 $res['time'] = str_replace(" ","&nbsp;",date($format, strtotime($this->date_start)));
                 $result[] = $res;
             }
         }
-
         $this->date_start = date("Y-m-d H:i:s",$sum_start);
         $this->date_end = date("Y-m-d H:i:s", $sum_end);
-        if ($calls)
-            $sum = $this->getCallsData();
-        else
-            $sum = $this->getIvrData();
+        if ($this->report == 'calls') $sum = $this->getCallsData();
+        if ($this->report == 'oncalls') $sum = $this->getOnCalls();
+        if ($this->report == 'ivr') $sum = $this->getIvrData();
         $sum['time'] = '<b>'._tr("Total").'</b>';
         $result[] = $sum;
 
         return $result;
     }
+
+    // Отчет бьющий общий отчет на месяца
+    function getMounthData(){
+        date("t", strtotime("10 February 2004")); // количество дней в месяце
+    }
+
 
     // Общий отчет по IVR за период
     function getIvrData(){

@@ -1,10 +1,16 @@
 <table width="99%" border="0" cellspacing="0" cellpadding="0" align="center">
-    <tr class="letra12">
+    <tr class="letra12" id="r1">
         <td width="12%" align="right">
             {$report.LABEL}:
         </td>
         <td width="12%" align="left" nowrap="nowrap">
             {$report.INPUT}
+        </td>
+        <td width="10%" align="right">
+            <span class="required">*</span>{$date_start.LABEL}:
+        </td>
+        <td width="10%" align="left" nowrap="nowrap">
+            {$date_start.INPUT}
         </td>
         <td width="12%" align="right">
             {$queue_in.LABEL}:
@@ -18,19 +24,19 @@
         <td width="10%" align="left" nowrap="nowrap">
             {$ivr.INPUT}
         </td>
-        <td width="10%" align="right">
-            <span class="required">*</span>{$date_start.LABEL}:
-        </td>
-        <td width="10%" align="left" nowrap="nowrap">
-            {$date_start.INPUT}
-        </td>
     </tr>
-    <tr class="letra12">
+    <tr class="letra12" id="r2">
         <td width="10%" align="right">
             {$span.LABEL}:
         </td>
         <td width="10%" align="left" nowrap="nowrap">
             {$span.INPUT}
+        </td>
+        <td width="10%" align="right">
+            <span class="required">*</span>{$date_end.LABEL}:
+        </td>
+        <td width="10%" align="left" nowrap="nowrap">
+            {$date_end.INPUT}
         </td>
         <td width="12%" align="right">
             {$queue_out.LABEL}:
@@ -43,12 +49,6 @@
         </td>
         <td width="12%" align="left" nowrap="nowrap">
             {$agent.INPUT}
-        </td>
-        <td width="10%" align="right">
-            <span class="required">*</span>{$date_end.LABEL}:
-        </td>
-        <td width="10%" align="left" nowrap="nowrap">
-            {$date_end.INPUT}
         </td>
     </tr>
 </table>
