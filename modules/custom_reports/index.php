@@ -61,26 +61,6 @@ function _moduleContent(&$smarty, $module_name)
 
     //conexion resource
     $pDB = new paloDB($arrConf['dsn_conn_database']);
-    //$pDB = "";
-
-/*
- *  Это выбор очередей из базы астериска, она нам тут пока не нужна
- *
-    //Получаем список очередей, для этого парсим конфиг
-    //ToDo -------------- вот это перенести в файл конфига, это же конфиг -------------------------------
-    $pConfig = new paloConfig("/etc", "amportal.conf", "=", "[[:space:]]*=[[:space:]]*");
-    $ampconfig = $pConfig->leer_configuracion(false);
-    $ampdsn = $ampconfig['AMPDBENGINE']['valor'] . "://" . $ampconfig['AMPDBUSER']['valor'] .
-        ":" . $ampconfig['AMPDBPASS']['valor'] . "@" . $ampconfig['AMPDBHOST']['valor'] . "/asterisk";
-
-    //Получаем список всех очередейд
-    $oQueue = new paloQueue($ampdsn);
-    $listQueue = $oQueue->getQueue();
-    if (!is_array($listQueue)) {
-        $smarty->assign("mb_title", _tr("Error when connecting to database"));
-        $smarty->assign("mb_message", $oQueue->errMsg);
-    }
-*/
 
 /*    //actions
     $action = getAction();
@@ -107,7 +87,7 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
 
     //begin данные для фильтра
     $oFilterForm = new paloForm($smarty, createFieldFilter($pCustom_Reports->getCampaignIn(), $pCustom_Reports->getCampaignOut(), $pCustom_Reports->getAgents(),$pCustom_Reports->getIvrs()));
-    $smarty->assign("show", _tr("Show"));
+    $smarty->assign('show', _tr('Show'));
     $htmlFilter  = $oFilterForm->fetchForm("$local_templates_dir/filter.tpl","",$_POST);
     //end данные для фильтра
 
@@ -186,6 +166,16 @@ function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
         $arrCampaign_out[$oCampaign_out['id']] = $oCampaign_out['name'];
     }
 
+    $arrAgents = array('' => '('._tr('All').')');
+    foreach ($agents as $agent) {
+        $arrAgents[$agent['id']] = $agent['name'];
+    }
+
+    $arrIvr = array('' => '('._tr('All').')');
+    foreach ($ivrs as $ivr) {
+        $arrIvr[$ivr['ivr_id']] = $ivr['ivr_name'];
+    }
+
     $arrReport = array(
         'calls'          =>  _tr('Calls'),
         'oncalls'   =>  _tr('onCalls'),
@@ -200,17 +190,23 @@ function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
         'ring'      =>  _tr('Ring'),
     );
 
-    $arrAgents = array('' => '('._tr('All').')');
-    foreach ($agents as $agent) {
-        $arrAgents[$agent['id']] = $agent['name'];
-    }
-
-    $arrIvr = array('' => '('._tr('All').')');
-    foreach ($ivrs as $ivr) {
-        $arrIvr[$ivr['ivr_id']] = $ivr['ivr_name'];
-    }
-
     $arrFormElements = array(
+        "report" => array(
+            "LABEL"                  => _tr("Report"),
+            "REQUIRED"               => "no",
+            "INPUT_TYPE"             => "SELECT",
+            "INPUT_EXTRA_PARAM"      => $arrReport,
+            "VALIDATION_TYPE"        => "text",
+            "VALIDATION_EXTRA_PARAM" => ""
+        ),
+        "span" => array(
+            "LABEL"                  => _tr("Span"),
+            "REQUIRED"               => "no",
+            "INPUT_TYPE"             => "SELECT",
+            "INPUT_EXTRA_PARAM"      => $arrSpan,
+            "VALIDATION_TYPE"        => "text",
+            "VALIDATION_EXTRA_PARAM" => ""
+        ),
         "date_start" => array(
             "LABEL"                  => _tr("Date start"),
             "REQUIRED"               => "yes",
@@ -242,22 +238,6 @@ function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
             "REQUIRED"               => "no",
             "INPUT_TYPE"             => "SELECT",
             "INPUT_EXTRA_PARAM"      => $arrCampaign_out,
-            "VALIDATION_TYPE"        => "text",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "report" => array(
-            "LABEL"                  => _tr("Report"),
-            "REQUIRED"               => "no",
-            "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrReport,
-            "VALIDATION_TYPE"        => "text",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "span" => array(
-            "LABEL"                  => _tr("Span"),
-            "REQUIRED"               => "no",
-            "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrSpan,
             "VALIDATION_TYPE"        => "text",
             "VALIDATION_EXTRA_PARAM" => ""
         ),
