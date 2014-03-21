@@ -194,6 +194,7 @@ function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
 
     $arrSpan = array(
         ''          =>  '('._tr('All').')',
+        'mon'       =>  _tr('Mounth'),
         'day'       =>  _tr('Day'),
         'hour'      =>  _tr('Hour'),
         'ring'      =>  _tr('Ring'),

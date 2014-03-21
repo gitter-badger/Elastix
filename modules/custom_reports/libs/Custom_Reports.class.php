@@ -82,13 +82,11 @@ class Custom_Reports{
             case 'calls':
                 switch($this->span)
                 {
+                    case "mon":
                     case "hour":
-                        $result = array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
-                        $this->action = 'calls_hour';
-                        break;
                     case "day":
                         $result = array("time","total","success","unsuccessful","dialing_time","connection_time","total_time","max_time","average_time","cancel_call");
-                        $this->action = 'calls_day';
+                        $this->action = 'calls_span';
                         break;
                     case "ring":
                         $result = array("time","phone","status","duration_wait","duration","agent","campaign");
@@ -104,13 +102,11 @@ class Custom_Reports{
             case 'oncalls':
                 switch($this->span)
                 {
+                    case "mon":
                     case 'hour':
-                        $result = array("time", "total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
-                        $this->action = 'oncalls_hour';
-                        break;
                     case 'day':
                         $result = array("time", "total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
-                        $this->action = 'oncalls_day';
+                        $this->action = 'oncalls_span';
                         break;
                     default:
                         $result = array("time", "total","success","unsuccessful","unsuccess_more_5","success_less_20","sl","avg_wait_success","avg_wait_unsuccess");
@@ -122,13 +118,11 @@ class Custom_Reports{
             case 'ivr':
                 switch($this->span)
                 {
+                    case 'mon':
                     case 'hour':
-                        $result = array("time", "'s'", "'i'", "'t'", "'*'", "'#'", "'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'");
-                        $this->action = 'ivr_hour';
-                        break;
                     case 'day':
                         $result = array("time", "'s'", "'i'", "'t'", "'*'", "'#'", "'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'");
-                        $this->action = 'ivr_day';
+                        $this->action = 'ivr_span';
                         break;
                     case 'ring':
                         $result = array("ivr_name", "phone", "time", "ivr_time", "key");
@@ -153,16 +147,8 @@ class Custom_Reports{
 
         switch($this->action)
         {
-            case "calls_hour":
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
-                $result = $this->getPeriodData(3600,"d.m.y H:i");
-                break;
-
-            case "calls_day":
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))."00:00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
-                $result = $this->getPeriodData(86400,"d.m.y");
+            case "calls_span":
+                $result = $this->getPeriodData();
                 break;
 
             case "calls_ring":
@@ -179,16 +165,8 @@ class Custom_Reports{
                 }
                 break;
 
-            case 'oncalls_hour':
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
-                $result = $this->getPeriodData(3600,"d.m.y H:i");
-                break;
-
-            case 'oncalls_day':
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))."00:00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
-                $result = $this->getPeriodData(86400,"d.m.y");
+            case 'oncalls_span':
+                $result = $this->getPeriodData();
                 break;
 
             case "oncalls_default":
@@ -197,19 +175,13 @@ class Custom_Reports{
                 $result[0] = $res;
                 break;
 
-            case "ivr_hour":
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
-                $result = $this->getPeriodData(3600,"d.m.y H:i");
-                break;
-
-            case "ivr_day":
-                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))."00:00:00"));
-                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
-                $result = $this->getPeriodData(86400,"d.m.y");
+            case "ivr_span":
+                $result = $this->getPeriodData();
                 break;
 
             case "ivr_ring":
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H:i",strtotime($this->date_start)).":00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H:i",strtotime($this->date_end)).":00"));
                 $result = $this->getIvrDetail();
                 break;
 
@@ -429,7 +401,75 @@ class Custom_Reports{
     }
 
     // Отчет бьющий общий отчет на заданные периоды.Этакий хак с манипуляциями дат начала и конца периода.
-    function getPeriodData($period,$format)
+    function getPeriodData()
+    {
+        switch($this->span)
+        {
+            case "hour":
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_start)).":00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H",strtotime($this->date_end)).":00:00"));
+                $format ="d.m.y H:i";
+                break;
+
+            case "day":
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 00:00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
+                $format = "d.m.y";
+                break;
+
+            case "mon":
+                $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m",strtotime($this->date_start))."-1 00:00:00"));
+                $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m",strtotime($this->date_end)).'-'.date("t",strtotime($this->date_end))." 23:59:59"));
+                $format = "m.y";
+                break;
+        }
+
+        $date_start = strtotime($this->date_start);
+        $date_end = strtotime($this->date_end);
+
+        $sum_start = $date_start;
+        $sum_end = $date_end;
+
+        $sum = array();
+
+        while($date_start <= $date_end){
+            $this->date_start = date("Y-m-d H:i:s",$date_start);
+
+            switch($this->span)
+            {
+                case 'hour':
+                    $this->date_end = date("Y-m-d H:i:s", ($date_start += 3600)-1);
+                    break;
+                case 'day':
+                    $this->date_end = date("Y-m-d H:i:s", ($date_start += 86400)-1);
+                    break;
+                case 'mon';
+                    $this->date_end = date("Y-m-d H:i:s", ($date_start += date('t',$date_start)*86400)-1);
+                    break;
+            }
+
+            $this->date_end = date("Y-m-d H:i:s", $date_start-1);
+
+            if ($this->report == 'calls') $res = $this->getCallsData();
+            if ($this->report == 'oncalls') $res = $this->getOnCalls();
+            if ($this->report == 'ivr') $res = $this->getIvrData();
+            if ($res) {
+                $res['time'] = str_replace(" ","&nbsp;",date($format, strtotime($this->date_start)));
+                $result[] = $res;
+            }
+        }
+        $this->date_start = date("Y-m-d H:i:s",$sum_start);
+        $this->date_end = date("Y-m-d H:i:s", $sum_end);
+//        if ($this->report == 'calls') $sum = $this->getCallsData();
+//        if ($this->report == 'oncalls') $sum = $this->getOnCalls();
+//        if ($this->report == 'ivr') $sum = $this->getIvrData();
+        $sum['time'] = '<b>'._tr("Total").'</b>';
+        $result[] = $sum;
+
+        return $result;
+    }
+
+/*    function getPeriodData($period,$format)
     {
         $date_start = strtotime($this->date_start);
         $date_end = strtotime($this->date_end);
@@ -461,7 +501,7 @@ class Custom_Reports{
 
         return $result;
     }
-
+*/
     // Отчет бьющий общий отчет на месяца
     function getMounthData(){
         date("t", strtotime("10 February 2004")); // количество дней в месяце

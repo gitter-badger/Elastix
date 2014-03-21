@@ -33,6 +33,7 @@ $arrLangModule=array(
 "Date end" => "Конечная дата",
 "Show" => "Показать",
 "All" => "Все",
+"Mounth" => "Месяц",
 "Day" => "День",
 "Hour" => "Час",
 "Ring" => "Звонок",
