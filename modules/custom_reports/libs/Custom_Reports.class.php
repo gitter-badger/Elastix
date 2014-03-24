@@ -187,12 +187,16 @@ class Custom_Reports{
                         $this->action = 'ivr_ring';
                         break;
                     default:
-                        // Эта фишка с кавычками необходима для отображения символа "s", он режется транслэйтером эластикса
                         $result = array("time", "'s'", "'i'", "'t'", "'*'", "'#'", "'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'");
                         $this->action = 'ivr_default';
                         break;
                 }
                 break;
+
+            case 'volvo':
+                    $result = array("total_in", "total_accept", "left_ivr", "not_respond", "total_night", "mondeal_night", "voice_mail", "time_calls");
+                    $this->action = 'volvo';
+                    break;
         }
 
         return $result;
@@ -205,11 +209,11 @@ class Custom_Reports{
 
         switch($this->action)
         {
-            case "calls_span":
+            case 'calls_span':
                 $result = $this->getPeriodData();
                 break;
 
-            case "calls_ring":
+            case 'calls_ring':
                 $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H:i",strtotime($this->date_start)).":00"));
                 $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H:i",strtotime($this->date_end)).":00"));
                 $result = $this->getRingData();
@@ -227,26 +231,30 @@ class Custom_Reports{
                 $result = $this->getPeriodData();
                 break;
 
-            case "oncalls_default":
+            case 'oncalls_default':
                 $res = $this->getOnCalls();
                 $res['time'] = str_replace(" ","&nbsp;",date("d.m.y H:i", strtotime($this->date_start))." - ".date("d.m.y H:i", strtotime($this->date_end)));
                 $result[0] = $res;
                 break;
 
-            case "ivr_span":
+            case 'ivr_span':
                 $result = $this->getPeriodData();
                 break;
 
-            case "ivr_ring":
+            case 'ivr_ring':
                 $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d H:i",strtotime($this->date_start)).":00"));
                 $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d H:i",strtotime($this->date_end)).":00"));
                 $result = $this->getIvrDetail();
                 break;
 
-            case "ivr_default":
+            case 'ivr_default':
                 $res = $this->getIvrData();
                 $res['time'] = str_replace(" ","&nbsp;",date("d.m.y H:i", strtotime($this->date_start))." - ".date("d.m.y H:i", strtotime($this->date_end)));
                 $result[0] = $res;
+                break;
+
+            case 'volvo';
+                $result = $this->getVolvoData();
                 break;
         }
 
@@ -255,7 +263,7 @@ class Custom_Reports{
 
 // **************************  Здесь начинаются функции для выбора данных **********************************************
 
-    // Отчет бьющий общий отчет на заданные периоды.Этакий хак с манипуляциями дат начала и конца периода.
+    // Функция бьющая общий отчет на заданные периоды.Этакий хак с манипуляциями дат начала и конца периода.
     function getPeriodData()
     {
         switch($this->span)
@@ -325,6 +333,112 @@ class Custom_Reports{
     }
 
 // ******************************* Отчеты отдающие по строке за заданный период ****************************************
+
+    // Странный отчет для проекта Volvo
+    function getVolvoData()
+    {
+        // Отчет за день, посему режем часы, минуты и секунды
+        $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 00:00:00"));
+        $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 00:00:00"));
+
+        // Total incoming calls
+        $query = "SELECT COUNT(*) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND pressed_key = ?  AND (ivr_id = ? OR ivr_id = ?)";
+        $params = array($this->date_start, $this->date_end, 's', '3', '4'); // 3 и 4 id дневного и ночного ivr
+        $res = $this->_DB->getFirstRowQuery($query,false, $params);
+        $result[0]['total_in'] = $res[0];
+
+        // Total accepted calls
+        $query = "SELECT COUNT(*) FROM call_entry WHERE (datetime_init BETWEEN ? AND ?) AND status = ?  AND id_campaign = ?";
+        $params = array(
+            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 20:00:00")),
+            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 09:00:00")),
+            'terminada',
+            '1' // id очереди
+        );
+        $res = $this->_DB->getFirstRowQuery($query,false, $params);
+        $result[0]['total_accept'] = $res[0];
+
+        // Left while IVR on
+        $query = "SELECT COUNT(*) FROM
+                                  (SELECT call_id, COUNT(*) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND (ivr_id = ? OR ivr_id = ?) GROUP BY call_id HAVING COUNT(*) = '1')q";
+        $params = array($this->date_start, $this->date_end, '3', '4'); // 3 и 4 id дневного и ночного ivr
+        $res = $this->_DB->getFirstRowQuery($query,false, $params);
+        $result[0]['left_ivr'] = $res[0];
+
+        // Not responded
+        $query = "SELECT COUNT(*) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND status = ?  AND id_campaign = ?";
+        $params = array(
+            $this->date_start,
+            $this->date_end,
+            'abandonada',
+            '1' // id очереди
+        );
+        $res = $this->_DB->getFirstRowQuery($query,false, $params);
+        $result[0]['not_respond'] = $res[0];
+
+        // Total night time calls (20.00-09.00)
+        $query = "SELECT COUNT(*) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND pressed_key = ?  AND ivr_id = ?";
+        $params = array(
+            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 20:00:00")),
+            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 09:00:00")),
+            's',
+            '4'  // 4 id ночного ivr
+        );
+        $res = $this->_DB->getFirstRowQuery($query,false, $params);
+        $result[0]['total_night'] = $res[0];
+
+        // Mondeal "night time"(20.00-09.00)
+        $query = "SELECT COUNT(*) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND pressed_key = ?  AND ivr_id = ?";
+        $params = array(
+            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 20:00:00")),
+            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 09:00:00")),
+            '1', // нажата "1"
+            '4'  // 4 id ночного ivr
+        );
+        $res = $this->_DB->getFirstRowQuery($query,false, $params);
+        $result[0]['mondeal_night'] = $res[0];
+
+        // Voice mail
+        $query = "SELECT COUNT(*) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND pressed_key = ?  AND ivr_id = ?";
+        $params = array(
+            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))."20:00:00")),
+            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 09:00:00")),
+            '2', // нажата "2"
+            '4'  // 4 id ночного ivr
+        );
+        $res = $this->_DB->getFirstRowQuery($query,false, $params);
+        $result[0]['voice_mail'] = $res[0];
+
+        // Night time calls (20.00-09.00)
+        $result[0]['time_calls'] = $result[0]['total_night'] - ($result[0]['mondeal_night'] + $result[0]['voice_mail']);
+
+        // А теперь посчитаем проценты
+        $result[1]['total_in'] = '100%';
+
+        $result[1]['total_accept'] = ($result[0]['total_accept'] / $result[0]['total_in']) * 100;
+        $result[1]['total_accept'] = round($result[1]['total_accept']).'%';
+
+        $result[1]['left_ivr'] = ($result[0]['left_ivr'] / $result[0]['total_in']) * 100;
+        $result[1]['left_ivr'] = round($result[1]['left_ivr']).'%';
+
+        $result[1]['not_respond'] = ($result[0]['not_respond'] / $result[0]['total_in']) * 100;
+        $result[1]['not_respond'] = round($result[1]['not_respond']).'%';
+
+        $result[1]['total_night'] = ($result[0]['total_night'] / $result[0]['total_in']) * 100;
+        $result[1]['total_night'] = round($result[1]['total_night']).'%';
+
+        $result[1]['mondeal_night'] = ($result[0]['mondeal_night'] / $result[0]['total_in']) * 100;
+        $result[1]['mondeal_night'] = round($result[1]['mondeal_night']).'%';
+
+        $result[1]['voice_mail'] = ($result[0]['voice_mail'] / $result[0]['total_in']) * 100;
+        $result[1]['voice_mail'] = round($result[1]['voice_mail']).'%';
+
+        $result[1]['time_calls'] = ($result[0]['time_calls'] / $result[0]['total_in']) * 100;
+        $result[1]['time_calls'] = round($result[1]['time_calls']).'%';
+
+        return $result;
+    }
+
     // Детально по IVR
     function getIvrDetail(){
         $query = "SELECT ivr_name, phone, calldatetime, ivr_datetime, pressed_key FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?)";
@@ -736,6 +850,6 @@ class Custom_Reports{
         if ($sec <= 0)
             return false;
         else
-          return str_pad((int)($sec/3600),2,'0',STR_PAD_LEFT)._tr("h").str_pad(($sec/60 % 60),2,'0',STR_PAD_LEFT)._tr("m"). str_pad(($sec%60),2,'0',STR_PAD_LEFT)._tr("s");
+          return str_pad((int)($sec/3600),2,'0',STR_PAD_LEFT)._tr("hr").str_pad(($sec/60 % 60),2,'0',STR_PAD_LEFT)._tr("min"). str_pad(($sec%60),2,'0',STR_PAD_LEFT)._tr("sec");
     }
 }

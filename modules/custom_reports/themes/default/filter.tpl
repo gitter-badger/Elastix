@@ -5,8 +5,10 @@
             {$report.INPUT}
         </td>
         <td width="10%" align="left">
-            {$span.LABEL}:
-            {$span.INPUT}
+            <div id="span">
+                {$span.LABEL}:
+                {$span.INPUT}
+            </div>
         </td>
         <td width="10%" align="right">
             <span class="required">*</span>{$date_start.LABEL}:

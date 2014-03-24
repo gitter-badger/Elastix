@@ -180,6 +180,7 @@ function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
         'calls'          =>  _tr('Calls'),
         'oncalls'   =>  _tr('onCalls'),
         'ivr' =>  _tr('IVR'),
+        'volvo' => _tr('Volvo'),
     );
 
     $arrSpan = array(
