@@ -28,7 +28,7 @@
   $Id: en.lang,v 1.1 2014-01-31 12:01:59 supme supmea@gmail.com Exp $ */
 global $arrLangModule;
 $arrLangModule=array(
-"Custom Reports" => "Наши отчеты",
+"DM Custom Reports" => "Наши отчеты",
 "Date start" => "Начальная дата",
 "Date end" => "Конечная дата",
 "Show" => "Показать",
