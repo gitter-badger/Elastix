@@ -28,7 +28,7 @@
   $Id: en.lang,v 1.1 2014-02-27 12:02:11 Supme supmea@gmail.com Exp $ */
 global $arrLangModule;
 $arrLangModule=array(
-"Operator Break" => "Управление перерывами",
+"DM Operator Break" => "Управление перерывами",
 "Agents" => "Агенты",
 "Breaks" => "Перерывы",
 "Working" => "В работе",
