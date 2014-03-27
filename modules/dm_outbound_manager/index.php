@@ -36,7 +36,7 @@ function _moduleContent(&$smarty, $module_name)
 {
     //include module files
     include_once "modules/$module_name/configs/default.conf.php";
-    include_once "modules/$module_name/libs/Custom_Reports.class.php";
+    include_once "modules/$module_name/libs/Outbound_Manager.class.php";
 
     //include file language agree to elastix configuration
     //if file language not exists, then include language by default (en)
@@ -54,70 +54,49 @@ function _moduleContent(&$smarty, $module_name)
     $arrConf = array_merge($arrConf,$arrConfModule);
     $arrLang = array_merge($arrLang,$arrLangModule);
 
-    //folder path for custom templates
+    // путь к шаблону
     $templates_dir=(isset($arrConf['templates_dir']))?$arrConf['templates_dir']:'themes';
     $local_templates_dir="$base_dir/modules/$module_name/".$templates_dir.'/'.$arrConf['theme'];
 
-    //conexion resource
+    // конект к базе
     $pDB = new paloDB($arrConf['dsn_conn_database']);
 
-/*    //actions
-    $action = getAction();
-    $content = "";
-
-    switch($action){
-        default:
-            $content = reportCustom_Reports($smarty, $module_name, $local_templates_dir, $pDB, $arrConf);
-            break;
-    }
-    return $content;
-*/
-    return reportCustom_Reports($smarty, $module_name, $local_templates_dir, $pDB, $arrConf);
+    return reportOutbound_Manager($smarty, $module_name, $local_templates_dir, $pDB);
 }
 
-function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf)
+function reportOutbound_Manager($smarty, $module_name, $local_templates_dir, &$pDB)
 {
-    $pCustom_Reports = new Custom_Reports($pDB);
+    $OutboundManager = new OutboundManager($pDB);
 
     //Параметры для грида
     $oGrid  = new paloSantoGrid($smarty);
     $oGrid->pagingShow(false); // не показывать пагинатор.
-    $oGrid->enableExport();    // включить экспорт результатов.
 
     //begin данные для фильтра
-    $oFilterForm = new paloForm($smarty, createFieldFilter($pCustom_Reports->getCampaignIn(), $pCustom_Reports->getCampaignOut(), $pCustom_Reports->getAgents(),$pCustom_Reports->getIvrs()));
+    $oFilterForm = new paloForm($smarty, createFieldFilter($OutboundManager->getCampaign()));
     $smarty->assign('show', _tr('Show'));
     $htmlFilter  = $oFilterForm->fetchForm("$local_templates_dir/filter.tpl","",$_POST);
     //end данные для фильтра
 
     $oGrid->showFilter(trim($htmlFilter));
 
-    //    $isExport = $oGrid->isExportAction();
-
     //Добавляем в урл страницы дополнительные параметры
     $params = array(
         "menu"      => $module_name,
-        "queue_in"  => getParameter("queue_in"),
-        "queue_out" => getParameter("queue_out"),
-        "date_start"=> getParameter("date_start"),
-        "date_end"  => getParameter("date_end"),
-        "report"    => getParameter("report"),
-        "span"      => getParameter("span"),
-        "agent"     => getParameter("agent"),
-        "ivr"       => getParameter('ivr')
+        "campaign"  => getParameter("campaign"),
     );
 
     // Передаем параметры фильтру
-    $pCustom_Reports->setParams($params["queue_in"], $params["queue_out"], $params['date_start'], $params['date_end'], $params['report'], $params['span'], $params['agent'], $params['ivr']);
+    $OutboundManager->setParams($params["campaign"]);
 
     //Столбцы для отображения в гриде
-    $Columns = $pCustom_Reports->getColumns_Reports();
+    $Columns = $OutboundManager->getColumns();
     foreach($Columns as $column){
         $arrColumns[] = _tr($column);
     }
 
     // Получаем данные
-    $arrResult =$pCustom_Reports->getCustom_Reports();
+    $arrResult =$OutboundManager->getList();
     if(is_array($arrResult)){
         foreach($arrResult as $key => $value){
             $i=0;
@@ -132,187 +111,28 @@ function reportCustom_Reports($smarty, $module_name, $local_templates_dir, &$pDB
     $oGrid->setURL($params);
     $oGrid->setData($arrData);
     $oGrid->setColumns($arrColumns);
-    $oGrid->setTitle(_tr("Custom Reports"));
-    $oGrid->setNameFile_Export(_tr("report"));
+    $oGrid->setTitle(_tr("Outbound Manager"));
 
-    // Так как с штатным экспортом отчетов проблема, перехватываем стандартный экспорт и делаем свой...
-    // ToDo Когда наладят можно убрать
-    $file = _tr("report").'_'.date("d-m-Y_H:i:s", time());
-    switch($oGrid->exportType()){
-        case "csv":
-            exportCSV($file, $arrColumns, $arrData);
-            break;
-
-        case "xls":
-            exportXLS($file, $arrColumns, $arrData);
-            break;
-
-        default:
-            return $oGrid->fetchGrid();
-            break;
-    }
+    return $oGrid->fetchGrid();
 }
 
-function createFieldFilter($campaign_in, $campaign_out, $agents, $ivrs){
+function createFieldFilter($campaigns){
 
-    $arrCampaign_in = array('0' => '('._tr('No').')', 'all' => '('._tr('All').')');
-    foreach ($campaign_in as $oCampaign_in) {
-        $arrCampaign_in[$oCampaign_in['id']] = $oCampaign_in['name'];
+    foreach ($campaigns as $campaign) {
+        $arrCampaign[$campaign['campaign_id']] = $campaign['campaign_name'];
     }
-
-    $arrCampaign_out = array('0' => '('._tr('No').')', 'all' => '('._tr('All').')');
-    foreach ($campaign_out as $oCampaign_out) {
-        $arrCampaign_out[$oCampaign_out['id']] = $oCampaign_out['name'];
-    }
-
-    $arrAgents = array('' => '('._tr('All').')');
-    foreach ($agents as $agent) {
-        $arrAgents[$agent['id']] = $agent['name'];
-    }
-
-    $arrIvr = array('' => '('._tr('All').')');
-    foreach ($ivrs as $ivr) {
-        $arrIvr[$ivr['ivr_id']] = $ivr['ivr_name'];
-    }
-
-    $arrReport = array(
-        'calls'          =>  _tr('Calls'),
-        'oncalls'   =>  _tr('onCalls'),
-        'ivr' =>  _tr('IVR'),
-        'volvo' => _tr('Volvo'),
-    );
-
-    $arrSpan = array(
-        ''          =>  '('._tr('All').')',
-        'mon'       =>  _tr('Mounth'),
-        'day'       =>  _tr('Day'),
-        'hour'      =>  _tr('Hour'),
-        'ring'      =>  _tr('Ring'),
-    );
 
     $arrFormElements = array(
         "report" => array(
-            "LABEL"                  => _tr("Report"),
+            "LABEL"                  => _tr("Campaign"),
             "REQUIRED"               => "no",
             "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrReport,
-            "VALIDATION_TYPE"        => "text",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "span" => array(
-            "LABEL"                  => _tr("Span"),
-            "REQUIRED"               => "no",
-            "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrSpan,
-            "VALIDATION_TYPE"        => "text",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "date_start" => array(
-            "LABEL"                  => _tr("Date start"),
-            "REQUIRED"               => "yes",
-            "INPUT_TYPE"             => "DATE",
-            "INPUT_EXTRA_PARAM"      => array("TIME" => true, "FORMAT" => "%d %b %Y %H:%M","TIMEFORMAT" => "24"),
-            "VALIDATION_TYPE"        => "",
-            "EDITABLE"               => "si",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "date_end"   => array(
-            "LABEL"                  => _tr("Date end"),
-            "REQUIRED"               => "yes",
-            "INPUT_TYPE"             => "DATE",
-            "INPUT_EXTRA_PARAM"      => array("TIME" => true, "FORMAT" => "%d %b %Y %H:%M","TIMEFORMAT" => "24"),
-            "VALIDATION_TYPE"        => "",
-            "EDITABLE"               => "si",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "queue_in" => array(
-            "LABEL"                  => _tr("Campaign_in"),
-            "REQUIRED"               => "no",
-            "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrCampaign_in,
-            "VALIDATION_TYPE"        => "text",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "queue_out" => array(
-            "LABEL"                  => _tr("Campaign_out"),
-            "REQUIRED"               => "no",
-            "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrCampaign_out,
-            "VALIDATION_TYPE"        => "text",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "agent" => array(
-            "LABEL"                  => _tr("Agent"),
-            "REQUIRED"               => "no",
-            "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrAgents,
-            "VALIDATION_TYPE"        => "text",
-            "VALIDATION_EXTRA_PARAM" => ""
-        ),
-        "ivr" => array(
-            "LABEL"                  => _tr("Ivr"),
-            "REQUIRED"               => "no",
-            "INPUT_TYPE"             => "SELECT",
-            "INPUT_EXTRA_PARAM"      => $arrIvr,
+            "INPUT_EXTRA_PARAM"      => $arrCampaign,
             "VALIDATION_TYPE"        => "text",
             "VALIDATION_EXTRA_PARAM" => ""
         ),
     );
     return $arrFormElements;
-}
-
-function getAction()
-{
-    if(getParameter("save_new")) //Get parameter by POST (submit)
-        return "save_new";
-    else if(getParameter("save_edit"))
-        return "save_edit";
-    else if(getParameter("delete")) 
-        return "delete";
-    else if(getParameter("new_open")) 
-        return "view_form";
-    else if(getParameter("action")=="view")      //Get parameter by GET (command pattern, links)
-        return "view_form";
-    else if(getParameter("action")=="view_edit")
-        return "view_form";
-    else
-        return "report"; //cancel
-}
-// CSV экспорт --------------------------------------------------------
-function exportCSV($file, $arrColumns, $arrData)
-{
-    header("Content-type: text/csv");
-    header("Content-Disposition: attachment; filename=".$file.".csv");
-    header("Pragma: no-cache");
-    header("Expires: 0");
-
-    $outstream = fopen("php://output", "w");
-    fputcsv($outstream, exportConvert($arrColumns), ';');
-    foreach($arrData as $data){
-        $data = exportConvert($data);
-        fputcsv($outstream, $data,';');
-    }
-    fclose($outstream);
-}
-
-function exportConvert($data, $conv = false)
-{
-    foreach($data as $index => $val){
-        $search  = array("<b>",  "</b>", "&nbsp;");
-        $replace = array("",     "",      " ");
-        $val = str_replace($search, $replace, $val);
-        $data[$index] = $conv?$val:iconv("UTF8", "CP1251", $val);
-    }
-    return $data;
-}
-
-//XSL экспорт
-function exportXLS($file, $arrColumns, $arrData)
-{
-    $phpexcel = new Excel_Xml;
-    array_unshift($arrData, $arrColumns);
-    $phpexcel->addWorksheet(_tr('report'), exportConvert($arrData, true));
-    $phpexcel->sendWorkbook($file.'.xls');
 }
 
 ?>
