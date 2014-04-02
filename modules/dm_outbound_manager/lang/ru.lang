@@ -29,5 +29,10 @@
 global $arrLangModule;
 $arrLangModule=array(
 "DM Outbound Manager" => "Outbound manager",
+"Campaign" => "Кампания",
+"AddForm" => "Добавить",
+"check all" => "выбрать все",
+"uncheck all" => "снять выделение",
+"Show" => "Показать",
 );
 ?>

@@ -32,7 +32,7 @@ include_once "libs/paloSantoForm.class.php";
 include_once "libs/paloSantoConfig.class.php";
 include_once "libs/paloSantoQueue.class.php";
 
-function _moduleContent(&$smarty, $module_name)
+function _moduleContent($smarty, $module_name)
 {
     //include module files
     include_once "modules/$module_name/configs/default.conf.php";
@@ -64,7 +64,79 @@ function _moduleContent(&$smarty, $module_name)
     return reportOutbound_Manager($smarty, $module_name, $local_templates_dir, $pDB);
 }
 
-function reportOutbound_Manager($smarty, $module_name, $local_templates_dir, &$pDB)
+function reportOutbound_Manager($smarty, $module_name, $local_templates_dir, $pDB)
+{
+
+    $action = getParameter('action');
+    $id_call = (int)getParameter('id_call');
+    if (!in_array($action, array('', 'loadform', 'saveform', 'deleteform')))
+        $action = '';
+    switch ($action) {
+        case 'loadform':
+            $content = loadForm($smarty, $id_call, $local_templates_dir, $pDB);
+            break;
+
+        case 'saveform':
+            $content = saveForm($smarty, $module_name, $local_templates_dir, $pDB, $id_call);
+            break;
+
+        case 'deleteform':
+            $content = deleteForm($smarty, $module_name, $local_templates_dir, $pDB);
+            break;
+
+        default:
+            $content = listTasks($smarty, $module_name, $local_templates_dir, $pDB);
+            break;
+        }
+
+    return $content;
+}
+
+function deleteForm($smarty, $module_name, $local_templates_dir, $pDB){
+    $OutboundManager = new OutboundManager($pDB);
+    $OutboundManager->setParams(getParameter("campaign"));
+
+    $request = getParameter('id_call');
+    if(!is_array($request)) $id_call[0] = $request;
+    else $id_call = $request;
+
+    $OutboundManager->deleteData($id_call);
+
+    return listTasks($smarty, $module_name, $local_templates_dir, $pDB);
+}
+
+function saveForm($smarty, $module_name, $local_templates_dir, $pDB, $id_call)
+{
+    $OutboundManager = new OutboundManager($pDB);
+    $OutboundManager->setParams(getParameter("campaign"));
+    $fields = $OutboundManager->getData(0);
+    $data = array();
+    foreach($fields as $key => $field){
+        $data[$field['columna']] = getParameter($field['columna']);
+    }
+
+    $OutboundManager->setData($id_call, $data);
+
+    return listTasks($smarty, $module_name, $local_templates_dir, $pDB);
+}
+
+function loadForm($smarty, $id_call, $local_templates_dir, $pDB)
+{
+    $OutboundManager = new OutboundManager($pDB);
+    $data = $OutboundManager->getData($id_call);
+
+    $smarty->assign(array(
+        'Id_call'         =>  $id_call,
+        'FORMS'      =>  $data,
+        'BTN_save'   =>  _tr('Save data'),
+    ));
+
+
+    return $smarty->fetch("$local_templates_dir/form.tpl");
+}
+
+// Основная функция (вывод фильтра, список звонков по фильтру)
+function listTasks($smarty, $module_name, $local_templates_dir, $pDB)
 {
     $OutboundManager = new OutboundManager($pDB);
 
@@ -72,43 +144,54 @@ function reportOutbound_Manager($smarty, $module_name, $local_templates_dir, &$p
     $oGrid  = new paloSantoGrid($smarty);
     $oGrid->pagingShow(false); // не показывать пагинатор.
 
+    // Ловим переданные параметры
+    $params = array(
+        "menu"      => $module_name,
+        "campaign"  => getParameter('campaign'),
+    );
+
+    if(isset($params['campaign'])){
+        $smarty->assign('Selected', '1');
+    } else {
+        $smarty->assign('Selected', '0');
+    }
+
     //begin данные для фильтра
     $oFilterForm = new paloForm($smarty, createFieldFilter($OutboundManager->getCampaign()));
-    $smarty->assign('show', _tr('Show'));
+    $smarty->assign('Show', _tr('Show'));
+    $smarty->assign('AddForm', _tr('AddForm'));
+    $smarty->assign('Delete', _tr('Delete'));
+    $smarty->assign('check_all', _tr('check all'));
+    $smarty->assign('uncheck_all', _tr('uncheck all'));
     $htmlFilter  = $oFilterForm->fetchForm("$local_templates_dir/filter.tpl","",$_POST);
     //end данные для фильтра
 
     $oGrid->showFilter(trim($htmlFilter));
 
-    //Добавляем в урл страницы дополнительные параметры
-    $params = array(
-        "menu"      => $module_name,
-        "campaign"  => getParameter("campaign"),
-    );
-
     // Передаем параметры фильтру
-    $OutboundManager->setParams($params["campaign"]);
+    $OutboundManager->setParams($params['campaign']);
 
     //Столбцы для отображения в гриде
     $Columns = $OutboundManager->getColumns();
     foreach($Columns as $column){
-        $arrColumns[] = _tr($column);
+        $arrColumns[] = _tr($column[0]);
     }
 
     // Получаем данные
-    $arrResult =$OutboundManager->getList();
+    $arrResult = $OutboundManager->getList();
+    $arrData = false;
     if(is_array($arrResult)){
         foreach($arrResult as $key => $value){
             $i=0;
             foreach($Columns as $column){
-                $arrTmp[$i] =  $value[$column];
+                $arrTmp[$i] =  $value[$column[0]];
                 $i++;
             }
             $arrData[] = $arrTmp;
         }
     }
 
-    $oGrid->setURL($params);
+    //$oGrid->setURL($params);
     $oGrid->setData($arrData);
     $oGrid->setColumns($arrColumns);
     $oGrid->setTitle(_tr("Outbound Manager"));
@@ -117,13 +200,13 @@ function reportOutbound_Manager($smarty, $module_name, $local_templates_dir, &$p
 }
 
 function createFieldFilter($campaigns){
-
+echo '<pre>';
     foreach ($campaigns as $campaign) {
-        $arrCampaign[$campaign['campaign_id']] = $campaign['campaign_name'];
+        $arrCampaign[$campaign[0]] = $campaign[1];
     }
-
+echo '</pre>';
     $arrFormElements = array(
-        "report" => array(
+        "campaign" => array(
             "LABEL"                  => _tr("Campaign"),
             "REQUIRED"               => "no",
             "INPUT_TYPE"             => "SELECT",

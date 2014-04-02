@@ -28,18 +28,6 @@
   $Id: en.lang,v 1.1 2014-01-31 12:01:59 supme supmea@gmail.com Exp $ */
 global $arrLangModule;
 $arrLangModule=array(
-"Custom Reports" => "Custom Reports",
-"Show" => "Show",
-"All queue" => "All queue",
-"Campaign" => "Queue",
-"total" => "Total",
-"success" => "Success",
-"unsuccessful" => "Unsuccessful",
-"dialing time" => "Dialing time",
-"connection time" => "Connection time",
-"total time" => "Total time",
-"max time" => "Max time",
-"average time" => "Average time",
-"cancel call" => "Cancel call"
+"DM Outbound Manager" => "Outbound manager",
 );
 ?>
