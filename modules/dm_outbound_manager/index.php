@@ -169,7 +169,8 @@ function listTasks($smarty, $module_name, $local_templates_dir, $pDB)
     $oGrid->showFilter(trim($htmlFilter));
 
     // Передаем параметры фильтру
-    $OutboundManager->setParams($params['campaign']);
+    $OutboundManager->setParams($params['campaign'], $module_name);
+
 
     //Столбцы для отображения в гриде
     $Columns = $OutboundManager->getColumns();

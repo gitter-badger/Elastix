@@ -31,6 +31,7 @@ class OutboundManager{
     var $errMsg;
     var $campaign = false;
     var $action;
+    var $module_name;
 
     function OutboundManager(&$pDB)
     {
@@ -52,8 +53,9 @@ class OutboundManager{
     }
 
     // Принимаем параметры
-    function setParams($campaign){
+    function setParams($campaign, $module_name){
         $this->campaign = $campaign;
+        $this->module_name = $module_name;
     }
 
     // Список компаний
@@ -109,9 +111,12 @@ class OutboundManager{
             return array();
         }
 
-        $action =  "<input class='button' style='width: 20px; height: 20px' onclick='loadForm(?)' value=' E '/>
-                    <input class='button' style='width: 20px; height: 20px' onclick='deleteForm(?)' value=' X '/>
+        $action =  "<img src='modules/$this->module_name/images/edit.png' alt='"._tr('edit')."' onclick='loadForm(?)'/>
+                    <img src='modules/$this->module_name/images/delete.png' alt='"._tr('delete')."'onclick='deleteForm(?)'/>
                     <input id='id_call' type='checkbox' name='id_call[]' value='?'/>";
+        /*$action =  "<input class='button' style='width: 20px; height: 20px' onclick='loadForm(?)' value=' E '/>
+                    <input class='button' style='width: 20px; height: 20px' onclick='deleteForm(?)' value=' X '/>
+                    <input id='id_call' type='checkbox' name='id_call[]' value='?'/>";*/
         foreach($calls as $key=>$call){
             $result[$call['id_call']]['Action'] = str_replace('?', $call['id_call'], $action);
             $result[$call['id_call']][$call['columna']] = $call['value'];
