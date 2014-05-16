@@ -90,10 +90,29 @@ class Monitoring{
     function statCampaign($typeCampaign, $idCampaign){
         echo "Tupla type - '$typeCampaign' id - '$idCampaign' ";
 
-        if($typeCampaign == 'outbound')
+        if($typeCampaign == 'outbound'){
             $sPeticionSQL = 'SELECT COUNT(*) AS n, status FROM calls WHERE id_campaign = ? GROUP BY status';
-        if($typeCampaign == 'inbound')
-            $sPeticionSQL = 'SELECT COUNT(*) AS n, status FROM calls_entry WHERE id_campaign = ? GROUP BY status';
+            $tupla['status'] = array(
+                'Pending'   =>  0,  // Llamada no ha sido realizada todavía (Вызов не было сделано еще)
+                'Placing'   =>  0,  // Originate realizado, no se recibe OriginateResponse (Происходят сделано, происходят ответ получен)
+                'Ringing'   =>  0,  // Se recibió OriginateResponse, no entra a cola (Происходят ответа, полученного, не входит очереди)
+                'OnQueue'   =>  0,  // Entró a cola, no se asigna a agente todavía (Вступил хвост еще не назначен агентом)
+                'Success'   =>  0,  // Conectada y asignada a un agente (Подключение и назначен агентом)
+                'OnHold'    =>  0,  // Llamada fue puesta en espera por agente (Вызов был приостановлен агентом)
+                'Failure'   =>  0,  // No se puede conectar llamada (Не удается подключиться вызов)
+                'ShortCall' =>  0,  // Llamada conectada pero duración es muy corta (Позвоните подключен, но продолжительность коротка)
+                'NoAnswer'  =>  0,  // Llamada estaba Ringing pero no entró a cola (Звон звонок был введен, но нет хвоста)
+                'Abandoned' =>  0,  // Llamada estaba OnQueue pero no habían agentes (На очереди позвонили, но не было агентов)
+            );
+        }
+
+        if($typeCampaign == 'inbound'){
+            $sPeticionSQL = 'SELECT COUNT(*) AS n, status FROM call_entry WHERE id_campaign = ? GROUP BY status';
+            $tupla['status'] = array(
+                'terminada' =>  0,
+                'abandonada'=>  0,
+                );
+        }
             //$sPeticionSQL = 'SELECT COUNT(*) AS n, status FROM calls_entry WHERE id_campaign = ?  and datetime_init > CURDATE() GROUP BY status';
 
         $recordset = $this->_DB->fetchTable($sPeticionSQL, TRUE, array($idCampaign));
@@ -101,19 +120,6 @@ class Monitoring{
             $this->errMsg = $this->_DB->errMsg;
             return NULL;
         }
-
-        $tupla['status'] = array(
-            'Pending'   =>  0,  // Llamada no ha sido realizada todavía (Вызов не было сделано еще)
-            'Placing'   =>  0,  // Originate realizado, no se recibe OriginateResponse (Происходят сделано, происходят ответ получен)
-            'Ringing'   =>  0,  // Se recibió OriginateResponse, no entra a cola (Происходят ответа, полученного, не входит очереди)
-            'OnQueue'   =>  0,  // Entró a cola, no se asigna a agente todavía (Вступил хвост еще не назначен агентом)
-            'Success'   =>  0,  // Conectada y asignada a un agente (Подключение и назначен агентом)
-            'OnHold'    =>  0,  // Llamada fue puesta en espera por agente (Вызов был приостановлен агентом)
-            'Failure'   =>  0,  // No se puede conectar llamada (Не удается подключиться вызов)
-            'ShortCall' =>  0,  // Llamada conectada pero duración es muy corta (Позвоните подключен, но продолжительность коротка)
-            'NoAnswer'  =>  0,  // Llamada estaba Ringing pero no entró a cola (Звон звонок был введен, но нет хвоста)
-            'Abandoned' =>  0,  // Llamada estaba OnQueue pero no habían agentes (На очереди позвонили, но не было агентов)
-        );
 
         foreach ($recordset as $tuplaStatus) {
             if (is_null($tuplaStatus['status']))
