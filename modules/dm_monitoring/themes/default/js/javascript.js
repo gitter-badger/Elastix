@@ -1,7 +1,9 @@
 /**
  * Created by aagafonov on 20.03.14.
  */
-var module_name = 'dm_outbound_manager';
+var module_name = 'dm_monitoring';
+
+var i = 0;
 
 $(document).ready(function() {
 
@@ -18,75 +20,62 @@ $(document).ready(function() {
             }
         ]
     });
-
-    $('#check-all').click(function(){
-        $("input:checkbox").attr('checked', true);
-    });
-    $('#uncheck-all').click(function(){
-        $("input:checkbox").attr('checked', false);
-    });
+//    setInterval(loadStat(1), 5000);
+    setInterval(function(){loadOper()}, 1000);
+    setInterval(function(){loadStat(1)}, 5000);
+//    display();
 
 });
 
-function show(element) {
-    element = document.getElementById(element);
-    element.style.display = "block";
-    }
-
-function hide(element) {
-    element = document.getElementById(element);
-    element.style.display = "none";
-}
-
-function closeForm() {
-    hide('edit_form');
-}
-
-function loadForm(id)
+function display()
 {
-    show('edit_form');
+    myTimer();
+    //loadOper();
+    //i = i + 1;
+    //if(i = 5) loadStat(1);
+
+    setTimeout(display(),1000);
+}
+
+function myStat() {
+    var d = new Date();
+    document.getElementById("stat").innerHTML = d.toLocaleTimeString();
+}
+
+function myOper() {
+    var d = new Date();
+    document.getElementById("oper").innerHTML = d.toLocaleTimeString();
+}
+
+
+function loadStat()
+{
     $.post('index.php?menu=' + module_name + '&rawmode=yes', {
             menu:		module_name,
             rawmode:	'yes',
-            action:		'loadform',
-            id_call:    id
+            action:		'loadstat',
+            campaign:    document.getElementById("campaign").options[document.getElementById("campaign").selectedIndex].value
         },
         function (respuesta) {
-            $(function(){$('#form_content').html((respuesta));});
+            $(function(){$('#stat').html((respuesta));});
         })
         .fail(function() {
             alert('Failed to connect to server to run request!');
         });
 }
 
-function deleteForm(id)
+function loadOper()
 {
-    if(confirm('You are sure?')){
-
-        var checkbox = document.getElementsByName('id_call[]')
-        var len = checkbox.length;
-        var checked = [];
-        for(var i = 0; i < len; i++) {
-            if(checkbox[i].type == 'checkbox') {
-                if(checkbox[i].checked || checkbox[i].value == id) checked.push(checkbox[i].value);
-            }
-        }
-
-        $.post('index.php?menu=' + module_name + '&rawmode=yes', {
-                menu:		module_name,
-                rawmode:	'yes',
-                action:		'deleteform',
-                id_call:    checked
-            },
-            function () {
-                var selectBox = document.getElementById("campaign");
-                var selectedValue = selectBox.options[selectBox.selectedIndex].value;
-                $(function(){window.location.href = 'index.php?menu=' + module_name + '&campaign=' + selectedValue;});
-            })
-            .fail(function() {
-                alert('Failed to connect to server to run request!');
-            });
-    } else {
-
-    }
+    $.post('index.php?menu=' + module_name + '&rawmode=yes', {
+            menu:		module_name,
+            rawmode:	'yes',
+            action:		'loadoper',
+            campaign:    document.getElementById("campaign").options[document.getElementById("campaign").selectedIndex].value
+        },
+        function (respuesta) {
+            $(function(){$('#oper').html((respuesta));});
+        })
+        .fail(function() {
+            alert('Failed to connect to server to run request!');
+        });
 }

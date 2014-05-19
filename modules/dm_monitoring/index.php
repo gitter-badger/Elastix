@@ -30,7 +30,7 @@
 include_once "libs/paloSantoGrid.class.php";
 include_once "libs/paloSantoForm.class.php";
 include_once "libs/paloSantoConfig.class.php";
-include_once "modules/agent_console/libs/ECCP.class.php";
+include_once "modules/agent_console/libs/paloSantoConsola.class.php";
 
 function _moduleContent(&$smarty, $module_name)
 {
@@ -65,10 +65,21 @@ function _moduleContent(&$smarty, $module_name)
     $action = getAction();
     $content = "";
 
+    $params=explode(':',getParameter('campaign'));
+    $type = $params[0];
+    $id = $params[1];
+
     switch($action){
         case "show":
-            $params=explode(':',getParameter('campaign'));
-            $content = viewStatMonitoring($smarty, $module_name, $local_templates_dir, $pDB, $arrConf, $params[0],$params[1]);
+
+            $content = viewStatMonitoring($smarty, $module_name, $local_templates_dir, $pDB, $arrConf, $type, $id);
+            break;
+        case "loadstat":
+            $content = viewStatMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf, $type, $id);
+            break;
+        case "loadoper":
+            //$content = time();
+            $content = viewOperMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf, $type, $id);
             break;
         default:
             $content = viewFormMonitoring($smarty, $module_name, $local_templates_dir, $pDB, $arrConf);
@@ -99,13 +110,26 @@ function viewStatMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
     $arrFormMonitoring = createFieldForm($Monitoring->getCampaigns(), $arrConf);
     $oForm = new paloForm($smarty,$arrFormMonitoring);
 
-    $content = viewFormMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf);
+    //$content = viewFormMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf);
     $stat = $Monitoring->statCampaign($type, $id);
-    $content = $content.$oForm->fetchForm("$local_templates_dir/table.tpl",_tr("Monitoring"));
+    echo '<pre>';print_r($stat); echo '</pre>';
 
-
-    return $content;
+    //return $content;
 }
+
+function viewOperMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf, $type, $id){
+    echo 'Begin oper monitoring!';
+
+    $oPaloConsola = new PaloSantoConsola();
+
+    $result = $oPaloConsola->leerEstadoCampania($type, $id);
+
+    echo ' = <pre>Agents: ';print_r($result); echo '</pre>';
+}
+
+
+
+
 
 function setOperator_Break($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf)
 {
@@ -195,8 +219,22 @@ function getStatus($type, $number, $arrConf){
 
 function getAction()
 {
-    if(isset($_POST["show"])) //Get parameter by POST (submit)
+    if(isset($_POST['show']))
+        return 'show';
+    if(isset($_POST['action']))
+        switch($_POST['action']){
+            case 'loadstat':
+                return "loadstat";
+            break;
 
-        return "show";
+            case 'loadoper':
+                return "loadoper";
+            break;
+
+            default:
+                return '';
+            break;
+        }
+    getParameter();
 }
 ?>

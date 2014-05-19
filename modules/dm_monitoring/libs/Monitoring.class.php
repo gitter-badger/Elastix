@@ -88,11 +88,10 @@ class Monitoring{
     }
 
     function statCampaign($typeCampaign, $idCampaign){
-        echo "Tupla type - '$typeCampaign' id - '$idCampaign' ";
 
         if($typeCampaign == 'outbound'){
-            $sPeticionSQL = 'SELECT COUNT(*) AS n, status FROM calls WHERE id_campaign = ? GROUP BY status';
-            $tupla['status'] = array(
+            $sql = 'SELECT COUNT(*) AS n, status FROM calls WHERE id_campaign = ? and datetime_init >= CURDATE() GROUP BY status';
+            $calls['status'] = array(
                 'Pending'   =>  0,  // Llamada no ha sido realizada todavía (Вызов не было сделано еще)
                 'Placing'   =>  0,  // Originate realizado, no se recibe OriginateResponse (Происходят сделано, происходят ответ получен)
                 'Ringing'   =>  0,  // Se recibió OriginateResponse, no entra a cola (Происходят ответа, полученного, не входит очереди)
@@ -107,27 +106,27 @@ class Monitoring{
         }
 
         if($typeCampaign == 'inbound'){
-            $sPeticionSQL = 'SELECT COUNT(*) AS n, status FROM call_entry WHERE id_campaign = ? GROUP BY status';
-            $tupla['status'] = array(
+            $sql = 'SELECT COUNT(*) AS n, status FROM call_entry WHERE id_campaign = ? and datetime_init >= CURDATE() GROUP BY status';
+            $calls['status'] = array(
                 'terminada' =>  0,
                 'abandonada'=>  0,
                 );
         }
-            //$sPeticionSQL = 'SELECT COUNT(*) AS n, status FROM calls_entry WHERE id_campaign = ?  and datetime_init > CURDATE() GROUP BY status';
+            //$sql = 'SELECT COUNT(*) AS n, status FROM calls_entry WHERE id_campaign = ?  and datetime_init > CURDATE() GROUP BY status';
 
-        $recordset = $this->_DB->fetchTable($sPeticionSQL, TRUE, array($idCampaign));
+        $recordset = $this->_DB->fetchTable($sql, TRUE, array($idCampaign));
         if (!is_array($recordset)) {
             $this->errMsg = $this->_DB->errMsg;
             return NULL;
         }
 
-        foreach ($recordset as $tuplaStatus) {
-            if (is_null($tuplaStatus['status']))
-                $tupla['status']['Pending'] = $tuplaStatus['n'];
-            else $tupla['status'][$tuplaStatus['status']] = $tuplaStatus['n'];
+        foreach ($recordset as $callsStatus) {
+            if (is_null($callsStatus['status']))
+                $calls['status']['Pending'] = $callsStatus['n'];
+            else $calls['status'][$callsStatus['status']] = $callsStatus['n'];
         }
-        echo ' = <pre>';print_r($tupla); echo '</pre>';
-        return $tupla;
+
+        return $calls;
     }
 }
 
