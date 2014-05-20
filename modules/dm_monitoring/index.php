@@ -94,10 +94,11 @@ function viewFormMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
     $arrFormMonitoring = createFieldForm($Monitoring->getCampaigns(), $arrConf);
     $oForm = new paloForm($smarty,$arrFormMonitoring);
 
-    $smarty->assign("REQUIRED_FIELD", _tr("Required field"));
-    $smarty->assign("icon", "images/list.png");
+    //translate
+    $smarty->assign('CampaignStatisticPerDay',_tr('Campaign statistic per day'));
+    $smarty->assign('AgentsActivity',_tr('Agents activity'));
 
-    $content = $oForm->fetchForm("$local_templates_dir/form.tpl",_tr("Monitoring"));
+    $content = $oForm->fetchForm("$local_templates_dir/form.tpl",_tr("DM_Monitoring"));
 
     return $content;
 }
@@ -107,7 +108,17 @@ function viewStatMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
     $Monitoring = new Monitoring($pDB);
 
     $result = $Monitoring->statCampaign($type, $id);
-    $smarty->assign("stat", $result['status']);
+
+    $res_status = array();
+    foreach($result['status'] as $key => $res){
+        $res_status[] = array('status' => _tr($key) , 'count' => $res);
+    }
+
+    $smarty->assign("stat", $res_status);
+
+    // translate
+    $smarty->assign('Status',_tr('Status'));
+    $smarty->assign('Count',_tr('Count'));
 
     return $smarty->fetch("file:$local_templates_dir/stat.tpl");
 }
@@ -118,10 +129,29 @@ function viewOperMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
 
     $result = $oPaloConsola->leerEstadoCampania($type, $id);
 
-    $smarty->assign("activecalls", $result['activecalls']);
-    $smarty->assign("agents", $result['agents']);
+    $Monitoring = new Monitoring($pDB);
+    $agents = $Monitoring->getAgents();
 
-//echo '<pre>';print_r($result); echo '</pre>';
+    $res_agents = array();
+    foreach($result["agents"] as $key => $res){
+        // Добавим к перерыву название перерыва
+        if($res['status'] == 'paused') $result["agents"][$key]["status"] = _tr("paused").'('.$res["pausename"].')';
+        else $result["agents"][$key]["status"] = _tr($res["status"]);
+        // Отобразим агента по имени
+        $res_agents[$agents[$key]] = $result["agents"][$key];
+    }
+
+    $smarty->assign("activecalls", $result['activecalls']);
+    $smarty->assign("agents", $res_agents);
+
+    // translate table
+    $smarty->assign('Number',_tr('Number'));
+    $smarty->assign('Trunk',_tr('Trunk'));
+    $smarty->assign('Start',_tr('Start'));
+    $smarty->assign('Agent',_tr('Agent'));
+    $smarty->assign('CallNumber',_tr('Call number'));
+    $smarty->assign('WaitingResponce',_tr('Waiting responce'));
+    $smarty->assign('AgentStatus',_tr('Agent status'));
 
     return $smarty->fetch("file:$local_templates_dir/oper.tpl");
 }

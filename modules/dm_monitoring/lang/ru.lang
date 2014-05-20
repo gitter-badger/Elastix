@@ -28,11 +28,39 @@
   $Id: en.lang,v 1.1 2014-01-31 12:01:59 supme supmea@gmail.com Exp $ */
 global $arrLangModule;
 $arrLangModule=array(
-"DM Outbound Manager" => "Outbound manager",
+"DM Monitoring" => "Мониторинг кампании",
 "Campaign" => "Кампания",
-"AddForm" => "Добавить",
-"check all" => "выбрать все",
-"uncheck all" => "снять выделение",
-"Show" => "Показать",
+"Campaign statistic per day" => "Статистика кампании за день",
+"Agents activity" => "Активность агентов",
+"Status" => "Статус",
+"Count" => "Колличество",
+"Number" => "Номер",
+"Trunk" => "Транк",
+"Start" => "Начало",
+"Agent" => "Агент",
+"Call number" => "Номер телефона",
+"Waiting responce" => "Ожидают ответа",
+"Agent status" => "Статус агентов",
+
+// Agents statuses
+"online" => "Готов",
+"offline" => "Не готов",
+"paused" => "Перерыв",
+
+// Calls statuses
+"terminada" => "Завершено",
+"abandonada" => "Сброшено",
+"activa" => "Активно",
+"Pending" => "Вызов еще не был сделан (Pending)",
+"Placing" => "Размещен в очерди (Placing)",
+"Ringing" => "Набор номера (Ringing)",
+"OnQueue" => "В очереди (OnQueue)",
+"Success" => "Подключен и назначен агенту (Success)",
+"OnHold" => "Вызов был приостановлен агентом (OnHold)",
+"Failure" => "Неудалось сделать вызов (Failure)",
+"ShortCall" => "Короткий звонок (ShortCall)",
+"NoAnswer" => "Нет ответа (NoAnswer)",
+"Abandoned" => "Поступил в очередь, но отвечен небыл (Abandoned)",
+
 );
 ?>

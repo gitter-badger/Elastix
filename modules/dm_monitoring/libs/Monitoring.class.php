@@ -58,7 +58,7 @@ class Monitoring{
         $this->module_name = $module_name;
     }
 
-    // Список компаний
+    // Список кампаний
     function getCampaigns(){
 
         $query   = "SELECT id, name FROM campaign";
@@ -87,6 +87,27 @@ class Monitoring{
         return $result;
     }
 
+    // Список агентов
+    function getAgents(){
+
+        $query   = "SELECT type, number, name FROM agent";
+        $result_tmp = $this->_DB->fetchTable($query, true);
+
+        if($result_tmp==FALSE){
+            $this->errMsg = $this->_DB->errMsg;
+            return array();
+        }
+
+        $result = array();
+
+        foreach($result_tmp as $tmp){
+            $result[$tmp['type'].'/'.$tmp['number']] = $tmp['name'];
+        }
+
+        return $result;
+    }
+
+    // Статистика кампании
     function statCampaign($typeCampaign, $idCampaign){
 
         if($typeCampaign == 'outgoing'){
@@ -108,8 +129,8 @@ class Monitoring{
         if($typeCampaign == 'incoming'){
             $sql = 'SELECT COUNT(*) AS n, status FROM call_entry WHERE id_campaign = ? and datetime_init >= CURDATE() GROUP BY status';
             $calls['status'] = array(
-                'terminada' =>  0,
-                'abandonada'=>  0,
+                'terminada'  =>  0,
+                'abandonada' =>  0,
                 );
         }
 

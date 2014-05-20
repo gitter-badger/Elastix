@@ -11,8 +11,7 @@
     </tr>
 </table>
 
-<h2>Operators activity</h2>
+<h2>{$AgentsActivity}</h2>
 <div id="operators"></div>
-<h2>Company statistic per day</h2>
+<h2>{$CampaignStatisticPerDay}</h2>
 <div id="statistic"></div>
-
