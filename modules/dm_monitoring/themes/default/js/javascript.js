@@ -20,33 +20,14 @@ $(document).ready(function() {
             }
         ]
     });
-//    setInterval(loadStat(1), 5000);
+
+    loadOper();
+    loadStat();
+
     setInterval(function(){loadOper()}, 1000);
-    setInterval(function(){loadStat(1)}, 5000);
-//    display();
+    setInterval(function(){loadStat()}, 10000);
 
 });
-
-function display()
-{
-    myTimer();
-    //loadOper();
-    //i = i + 1;
-    //if(i = 5) loadStat(1);
-
-    setTimeout(display(),1000);
-}
-
-function myStat() {
-    var d = new Date();
-    document.getElementById("stat").innerHTML = d.toLocaleTimeString();
-}
-
-function myOper() {
-    var d = new Date();
-    document.getElementById("oper").innerHTML = d.toLocaleTimeString();
-}
-
 
 function loadStat()
 {
@@ -57,7 +38,7 @@ function loadStat()
             campaign:    document.getElementById("campaign").options[document.getElementById("campaign").selectedIndex].value
         },
         function (respuesta) {
-            $(function(){$('#stat').html((respuesta));});
+            $(function(){$('#statistic').html((respuesta));});
         })
         .fail(function() {
             alert('Failed to connect to server to run request!');
@@ -73,7 +54,7 @@ function loadOper()
             campaign:    document.getElementById("campaign").options[document.getElementById("campaign").selectedIndex].value
         },
         function (respuesta) {
-            $(function(){$('#oper').html((respuesta));});
+            $(function(){$('#operators').html((respuesta));});
         })
         .fail(function() {
             alert('Failed to connect to server to run request!');

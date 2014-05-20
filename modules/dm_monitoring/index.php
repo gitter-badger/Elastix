@@ -94,12 +94,10 @@ function viewFormMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
     $arrFormMonitoring = createFieldForm($Monitoring->getCampaigns(), $arrConf);
     $oForm = new paloForm($smarty,$arrFormMonitoring);
 
-    $smarty->assign("SET", _tr("Set"));
     $smarty->assign("REQUIRED_FIELD", _tr("Required field"));
     $smarty->assign("icon", "images/list.png");
 
-    $htmlForm = $oForm->fetchForm("$local_templates_dir/form.tpl",_tr("Monitoring"));
-    $content = "<form  method='POST' style='margin-bottom:0;' action='?menu=$module_name'>".$htmlForm."</form>";
+    $content = $oForm->fetchForm("$local_templates_dir/form.tpl",_tr("Monitoring"));
 
     return $content;
 }
@@ -107,82 +105,27 @@ function viewFormMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
 function viewStatMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf, $type, $id){
 
     $Monitoring = new Monitoring($pDB);
-    $arrFormMonitoring = createFieldForm($Monitoring->getCampaigns(), $arrConf);
-    $oForm = new paloForm($smarty,$arrFormMonitoring);
 
-    //$content = viewFormMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf);
-    $stat = $Monitoring->statCampaign($type, $id);
-    echo '<pre>';print_r($stat); echo '</pre>';
+    $result = $Monitoring->statCampaign($type, $id);
+    $smarty->assign("stat", $result['status']);
 
-    //return $content;
+    return $smarty->fetch("file:$local_templates_dir/stat.tpl");
 }
 
 function viewOperMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf, $type, $id){
-    echo 'Begin oper monitoring!';
 
     $oPaloConsola = new PaloSantoConsola();
 
     $result = $oPaloConsola->leerEstadoCampania($type, $id);
 
-    echo ' = <pre>Agents: ';print_r($result); echo '</pre>';
+    $smarty->assign("activecalls", $result['activecalls']);
+    $smarty->assign("agents", $result['agents']);
+
+//echo '<pre>';print_r($result); echo '</pre>';
+
+    return $smarty->fetch("file:$local_templates_dir/oper.tpl");
 }
 
-
-
-
-
-function setOperator_Break($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf)
-{
-    $pOperator_Break = new Operator_Break($pDB);
-    $arrFormOperator_Break = createFieldForm($pOperator_Break->getAgents(), $pOperator_Break->getBreaks(), $arrConf);
-    $oForm = new paloForm($smarty,$arrFormOperator_Break);
-
-    if(!$oForm->validateForm($_POST)){
-        // Validation basic, not empty and VALIDATION_TYPE 
-        $smarty->assign("mb_title", _tr("Validation Error"));
-        $arrErrores = $oForm->arrErroresValidacion;
-        $strErrorMsg = "<b>"._tr("The following fields contain errors").":</b><br/>";
-        if(is_array($arrErrores) && count($arrErrores) > 0){
-            foreach($arrErrores as $k=>$v)
-                $strErrorMsg .= "$k, ";
-        }
-        $smarty->assign("mb_message", $strErrorMsg);
-        $content = viewFormOperator_Break($smarty, $module_name, $local_templates_dir, $pDB, $arrConf);
-    }
-    else{
-        $error = "Ok";
-        $eccp = new ECCP();
-        $cr = $eccp->connect($arrConf["eccp_host"], $arrConf["eccp_login"], $arrConf["eccp_password"]);
-        if (isset($cr->failure)) $error = "Error connect";
-        $agents = getParameter('agents');
-        $break =  getParameter('breaks');
-        foreach($agents as $agent){
-            $password = $pOperator_Break->getPassword($agent);
-            $eccp->setAgentNumber($password['type']."/".$password['number']);
-            $eccp->setAgentPass($password['password']);
-            if($break != '0' and $break != 'logout'){
-                $response = $eccp->pauseagent($break);
-                if (isset($response->failure)) {
-                    $eccp->unpauseagent();
-                    $response = $eccp->pauseagent($break);
-                    if (isset($response->failure)) $error = "Error";
-                }
-            }
-            else{
-                if($break == 'logout') $response = $eccp->logoutagent();
-                else $response = $eccp->unpauseagent();
-                if (isset($response->failure)) $error = "Error";
-            }
-        }
-
-        $eccp->disconnect();
-    }
-
-    $smarty->assign("mb_title", _tr("Set status"));
-    $smarty->assign("mb_message", _tr($error));
-
-    return viewFormOperator_Break($smarty, $module_name, $local_templates_dir, $pDB, $arrConf);;
-}
 
 function createFieldForm($campaigns, $arrConf)
 {
@@ -204,19 +147,6 @@ function createFieldForm($campaigns, $arrConf)
     return $arrFields;
 }
 
-
-function getStatus($type, $number, $arrConf){
-    $eccp = new ECCP();
-    $eccp->connect($arrConf["eccp_host"], $arrConf["eccp_login"], $arrConf["eccp_password"]);
-
-    $eccp->setAgentNumber($type."/".$number);
-    $res = $eccp->getagentstatus();
-
-    $eccp->disconnect();
-
-    return $res->status;
-}
-
 function getAction()
 {
     if(isset($_POST['show']))
@@ -235,6 +165,5 @@ function getAction()
                 return '';
             break;
         }
-    getParameter();
 }
 ?>

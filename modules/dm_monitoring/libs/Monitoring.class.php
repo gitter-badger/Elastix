@@ -70,12 +70,12 @@ class Monitoring{
         $result = array();
 
         foreach($result_in as $tmp){
-            $tmp['type'] = 'inbound';
+            $tmp['type'] = 'incoming';
             $result[] = $tmp;
         }
 
         foreach($result_out as $tmp){
-            $tmp['type'] = 'outbound';
+            $tmp['type'] = 'outgoing';
             $result[] = $tmp;
         }
 
@@ -89,8 +89,8 @@ class Monitoring{
 
     function statCampaign($typeCampaign, $idCampaign){
 
-        if($typeCampaign == 'outbound'){
-            $sql = 'SELECT COUNT(*) AS n, status FROM calls WHERE id_campaign = ? and datetime_init >= CURDATE() GROUP BY status';
+        if($typeCampaign == 'outgoing'){
+            $sql = 'SELECT COUNT(*) AS n, status FROM calls WHERE id_campaign = ? and date_init >= CURDATE() GROUP BY status';
             $calls['status'] = array(
                 'Pending'   =>  0,  // Llamada no ha sido realizada todavía (Вызов не было сделано еще)
                 'Placing'   =>  0,  // Originate realizado, no se recibe OriginateResponse (Происходят сделано, происходят ответ получен)
@@ -105,14 +105,13 @@ class Monitoring{
             );
         }
 
-        if($typeCampaign == 'inbound'){
+        if($typeCampaign == 'incoming'){
             $sql = 'SELECT COUNT(*) AS n, status FROM call_entry WHERE id_campaign = ? and datetime_init >= CURDATE() GROUP BY status';
             $calls['status'] = array(
                 'terminada' =>  0,
                 'abandonada'=>  0,
                 );
         }
-            //$sql = 'SELECT COUNT(*) AS n, status FROM calls_entry WHERE id_campaign = ?  and datetime_init > CURDATE() GROUP BY status';
 
         $recordset = $this->_DB->fetchTable($sql, TRUE, array($idCampaign));
         if (!is_array($recordset)) {
@@ -129,4 +128,3 @@ class Monitoring{
         return $calls;
     }
 }
-

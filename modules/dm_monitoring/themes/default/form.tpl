@@ -1,6 +1,7 @@
-<table width="99%" border="0" cellspacing="0" cellpadding="0" align="center">
+<br/>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
     <tr class="letra12" id="r1">
-        <td width="20%" align="right">
+        <td width="10%" align="right">
             {$campaign.LABEL}:
         </td>
         <td width="40%" align="left">
@@ -9,7 +10,9 @@
         <td>&nbsp;</td>
     </tr>
 </table>
-<hr/>
-<div id="stat">Statistic</div>
-<div id="oper">Operators</div>
-<hr/>
+
+<h2>Operators activity</h2>
+<div id="operators"></div>
+<h2>Company statistic per day</h2>
+<div id="statistic"></div>
+
