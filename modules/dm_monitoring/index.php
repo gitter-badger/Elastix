@@ -148,6 +148,7 @@ function viewOperMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
     $smarty->assign('Number',_tr('Number'));
     $smarty->assign('Trunk',_tr('Trunk'));
     $smarty->assign('Start',_tr('Start'));
+    $smarty->assign('Status',_tr('Status'));
     $smarty->assign('Agent',_tr('Agent'));
     $smarty->assign('CallNumber',_tr('Call number'));
     $smarty->assign('WaitingResponce',_tr('Waiting responce'));

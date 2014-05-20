@@ -111,7 +111,7 @@ class Monitoring{
     function statCampaign($typeCampaign, $idCampaign){
 
         if($typeCampaign == 'outgoing'){
-            $sql = 'SELECT COUNT(*) AS n, status FROM calls WHERE id_campaign = ? and date_init >= CURDATE() GROUP BY status';
+            $sql = 'SELECT COUNT(*) AS n, status FROM calls WHERE id_campaign = ? AND date_init >= CURDATE() GROUP BY status';
             $calls['status'] = array(
                 'Pending'   =>  0,  // Llamada no ha sido realizada todavía (Вызов не было сделано еще)
                 'Placing'   =>  0,  // Originate realizado, no se recibe OriginateResponse (Происходят сделано, происходят ответ получен)
@@ -127,7 +127,7 @@ class Monitoring{
         }
 
         if($typeCampaign == 'incoming'){
-            $sql = 'SELECT COUNT(*) AS n, status FROM call_entry WHERE id_campaign = ? and datetime_init >= CURDATE() GROUP BY status';
+            $sql = 'SELECT COUNT(*) AS n, status FROM call_entry WHERE id_campaign = ? AND (datetime_init >= CURDATE() OR (datetime_init IS NULL AND datetime_end >= CURDATE())) GROUP BY status';
             $calls['status'] = array(
                 'terminada'  =>  0,
                 'abandonada' =>  0,

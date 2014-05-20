@@ -1,4 +1,4 @@
-<table width="100%" class="tabForm">
+<table width="70%" class="tabForm">
     <tbody>
     <tr>
         <td><strong>{$WaitingResponce}</strong></td>

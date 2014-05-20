@@ -1,4 +1,4 @@
-<table width="100%" class="inline">
+<table width="30%" class="inline">
     <thead>
     <tr>
         <th width="80%"><strong>{$Status}</strong></th>
@@ -8,7 +8,7 @@
 
     {foreach from=$stat item=v}
     <tr>
-        <td align="center">{$v.status}</td>
+        <td>{$v.status}</td>
         <td align="center">{$v.count}</td>
     </tr>
     {/foreach}

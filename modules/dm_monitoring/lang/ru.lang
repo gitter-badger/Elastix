@@ -28,7 +28,7 @@
   $Id: en.lang,v 1.1 2014-01-31 12:01:59 supme supmea@gmail.com Exp $ */
 global $arrLangModule;
 $arrLangModule=array(
-"DM Monitoring" => "Мониторинг кампании",
+"DM_Monitoring" => "Мониторинг кампании",
 "Campaign" => "Кампания",
 "Campaign statistic per day" => "Статистика кампании за день",
 "Agents activity" => "Активность агентов",
@@ -46,6 +46,7 @@ $arrLangModule=array(
 "online" => "Готов",
 "offline" => "Не готов",
 "paused" => "Перерыв",
+"oncall" => "Разговаривает",
 
 // Calls statuses
 "terminada" => "Завершено",
