@@ -34,10 +34,12 @@ include_once "libs/paloSantoQueue.class.php";
 
 function _moduleContent(&$smarty, $module_name)
 {
+
     //include module files
     include_once "modules/$module_name/configs/default.conf.php";
     include_once "modules/$module_name/libs/Custom_Reports.class.php";
     include_once "modules/$module_name/libs/Excel_Xml.php";
+    include_once "modules/$module_name/libs/Download.class.php";
 
     //include file language agree to elastix configuration
     //if file language not exists, then include language by default (en)
@@ -55,6 +57,11 @@ function _moduleContent(&$smarty, $module_name)
     $arrConf = array_merge($arrConf,$arrConfModule);
     $arrLang = array_merge($arrLang,$arrLangModule);
 
+    if(isset($_GET['fileId'])){
+        getRecord($_GET['fileId'], $arrConf);
+        exit(0);
+    }
+
     //folder path for custom templates
     $templates_dir=(isset($arrConf['templates_dir']))?$arrConf['templates_dir']:'themes';
     $local_templates_dir="$base_dir/modules/$module_name/".$templates_dir.'/'.$arrConf['theme'];
@@ -62,7 +69,8 @@ function _moduleContent(&$smarty, $module_name)
     //conexion resource
     $pDB = new paloDB($arrConf['dsn_conn_database']);
 
-/*    //actions
+/*
+    //actions
     $action = getAction();
     $content = "";
 
@@ -316,4 +324,61 @@ function exportXLS($file, $arrColumns, $arrData)
     $phpexcel->sendWorkbook($file.'.xls');
 }
 
+function getRecord($fileId, $arrConf){
+/*
+    $pDB = new paloDB(generarDSNSistema('asteriskuser', 'asteriskcdrdb'));
+
+    $query = "SELECT userfield FROM cdr WHERE uniqueid=? AND userfield != ''";
+    $result = $pDB->getFirstRowQuery($query,true,array($fileId));
+
+    $file = basename(str_replace('audio:', '', $result['userfield']));
+    $file = str_replace($arrConf['records_dir'], '', $file);
+    $path = $arrConf['records_dir'].$file;
+
+
+    // Set Content-Type according to file extension
+    $contentTypes = array(
+        'wav'   =>  'audio/x-wav',
+        'gsm'   =>  'audio/x-gsm',
+        'mp3'   =>  'audio/mpeg',
+    );
+    $extension = substr(strtolower($file), -3);
+
+    if (!isset($contentTypes[$extension])) {
+        $path .= '.wav';
+        $file .= '.wav';
+        $extension  = 'wav';
+    }
+*/
+    $path = glob($arrConf['records_dir'].'*'.$fileId.'*');
+
+    if(isset($path[0])){
+        $file = str_replace($arrConf['records_dir'], '', $path[0]);
+        $in_browser = isset($_GET['download'])?true:false;
+        $download = new Download($path[0], $file, $in_browser);
+        $download->download_file();
+    } else {
+        Header('HTTP/1.1 404 Not Found');
+        die("<b>404 "._tr("no_file")." </b>");
+    }
+
+/*
+    // Actually open and transmit the file
+    $fp = fopen($path, 'rb');
+    if (!$fp) {
+        Header('HTTP/1.1 404 Not Found');
+        die("<b>404 "._tr("no_file")." </b>");
+    }
+    header("Pragma: public");
+    header("Expires: 0");
+    header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+    header("Cache-Control: public");
+    header("Content-Description: wav file");
+    header("Content-Type: " . $contentTypes[$extension]);
+    header("Content-Disposition: attachment; filename=" . $file);
+    header("Content-Transfer-Encoding: binary");
+    header("Content-length: " . filesize($path));
+    fpassthru($fp);
+    fclose($fp);*/
+}
 ?>

@@ -66,7 +66,7 @@ function changeReport() {
         hide('agent');
         hide('queue_in');
         hide('queue_out');
-        hide('span')
+        hide('span');
     }
 }
 

@@ -555,7 +555,7 @@ class Custom_Reports{
         $query = "
         SELECT * FROM (
           SELECT
-              callerid, datetime_entry_queue, duration_wait, duration, status, a.name as agentName, cp.name as campaignName
+              callerid, uniqueid, datetime_entry_queue, duration_wait, duration, status, a.name as agentName, cp.name as campaignName
           FROM
               call_entry ce
             LEFT JOIN agent a ON ce.id_agent = a.id
@@ -580,7 +580,7 @@ class Custom_Reports{
 
           UNION ALL
 
-          SELECT phone, fecha_llamada, duration_wait, duration, status, a.name as agentName, cp.name as campaignName
+          SELECT phone, uniqueid, fecha_llamada, duration_wait, duration, status, a.name as agentName, cp.name as campaignName
           FROM
               calls cs
             LEFT JOIN agent a ON cs.id_agent = a.id
@@ -625,7 +625,7 @@ class Custom_Reports{
         $totalDuration = 0;
         foreach($res as $key=>$value){
             $arrTmp["time"] = str_replace(" ", "&nbsp;", date("d.m.y H:i:s",strtotime(date("Y-m-d H:i:s",strtotime($value["datetime_entry_queue"])))));
-            $arrTmp["phone"] = $value["callerid"];
+            $arrTmp["phone"] = '<a href="?menu=dm_custom_reports&fileId='.$value["uniqueid"].'&download&rawmode=yes">'.$value["callerid"].'</a> <img id="ctrl" src="modules/dm_custom_reports/images/play.png" data="'.$value["uniqueid"].'" onclick="play(this)"/><audio id="'.$value["uniqueid"].'" preload="none"><source src="?menu=dm_custom_reports&fileId='.$value["uniqueid"].'&rawmode=yes"/></audio>';
             $arrTmp["status"] = $statuses[$value["status"]]?$statuses[$value["status"]]:$value["status"];
             $totalDurationWait += $value["duration_wait"];
             $arrTmp["duration_wait"] = $this->convertSec($value["duration_wait"]);
