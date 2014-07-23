@@ -75,11 +75,11 @@ function _moduleContent(&$smarty, $module_name)
             $content = viewStatMonitoring($smarty, $module_name, $local_templates_dir, $pDB, $arrConf, $type, $id);
             break;
         case "loadstat":
-            $content = viewStatMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf, $type, $id);
+            $content = viewStatMonitoring($smarty, $module_name, $local_templates_dir, $pDB, $arrConf, $type, $id);
             break;
         case "loadoper":
             //$content = time();
-            $content = viewOperMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, $arrConf, $type, $id);
+            $content = viewOperMonitoring($smarty, $module_name, $local_templates_dir, $pDB, $arrConf, $type, $id);
             break;
         default:
             $content = viewFormMonitoring($smarty, $module_name, $local_templates_dir, $pDB, $arrConf);
@@ -132,14 +132,36 @@ function viewOperMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
     $Monitoring = new Monitoring($pDB);
     $agents = $Monitoring->getAgents();
 
-    $res_agents = array();
+    $res_online_agents = array();
+    $res_offline_agents = array();
     foreach($result["agents"] as $key => $res){
-        // Добавим к перерыву название перерыва
-        if($res['status'] == 'paused') $result["agents"][$key]["status"] = _tr("paused").'('.$res["pausename"].')';
-        else $result["agents"][$key]["status"] = _tr($res["status"]);
-        // Отобразим агента по имени
-        $res_agents[$agents[$key]] = $result["agents"][$key];
+        if($res['status'] != 'offline')
+        {
+            /* Добавим к перерыву название перерыва
+            if($res['status'] == 'paused')
+                $result["agents"][$key]["status"] = _tr("paused").'('.$res["pausename"].')';
+            else
+                $result["agents"][$key]["status"] = _tr($res["status"]);
+            */
+            // Не будем добавлять слово "Перерыв"
+            $result["agents"][$key]["status"] = $res['status'] == 'paused'?'<strong><span style="color:red">'.$res["pausename"].'</span></strong>':_tr($res["status"]);
+            // Поле с длительностью
+            $start = NULL;
+            if($res['pausestart']) $start = $res['pausestart'];
+            if($res['linkstart']) $start = $res['linkstart'];
+            if($res['dialstart']) $start = $res['dialstart'];
+            $result["agents"][$key]['lenght'] = $start?gmdate('H:i:s',time()-strtotime($start)):NULL;
+            // Отобразим агента по имени
+            $res_online_agents['<strong>'.$agents[$key].'</strong>'] = $result["agents"][$key];
+        } else {
+            $result["agents"][$key]["status"] = _tr($res["status"]);
+            $result["agents"][$key]['lenght'] = NULL;
+            $res_offline_agents['<strong>'.$agents[$key].'</strong>'] = $result["agents"][$key];
+        }
+
     }
+//echo '<pre>';var_dump($result);echo '</pre>';
+    $res_agents = array_merge($res_online_agents, $res_offline_agents);
 
     $smarty->assign("activecalls", $result['activecalls']);
     $smarty->assign("agents", $res_agents);
@@ -150,6 +172,7 @@ function viewOperMonitoring($smarty, $module_name, $local_templates_dir, &$pDB, 
     $smarty->assign('Start',_tr('Start'));
     $smarty->assign('Status',_tr('Status'));
     $smarty->assign('Agent',_tr('Agent'));
+    $smarty->assign('Lenght',_tr('Lenght'));
     $smarty->assign('CallNumber',_tr('Call number'));
     $smarty->assign('WaitingResponce',_tr('Waiting responce'));
     $smarty->assign('AgentStatus',_tr('Agent status'));

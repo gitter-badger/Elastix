@@ -34,6 +34,7 @@
                         <th>{$CallNumber}</th>
                         <th>{$Trunk}</th>
                         <th>{$Start}</th>
+                        <th>{$Lenght}</th>
                     </tr>
                 </thead>
                 {foreach from=$agents key=k item=v}
@@ -43,6 +44,7 @@
                         <td style="border: 1px solid grey">{$v.callnumber}</td>
                         <td style="border: 1px solid grey">{$v.trunk}</td>
                         <td style="border: 1px solid grey">{$v.pausestart}{$v.linkstart}{$v.dialstart}</td>
+                        <td style="border: 1px solid grey">{$v.lenght}</td>
                     </tr>
                 {/foreach}
             </table>

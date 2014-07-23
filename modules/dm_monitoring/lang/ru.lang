@@ -38,15 +38,16 @@ $arrLangModule=array(
 "Trunk" => "Транк",
 "Start" => "Начало",
 "Agent" => "Агент",
+"Lenght" => "Длит.",
 "Call number" => "Номер телефона",
 "Waiting responce" => "Ожидают ответа",
 "Agent status" => "Статус агентов",
 
 // Agents statuses
-"online" => "Готов",
+"online" => "<strong><span style='color:green'>Готов</span></strong>",
 "offline" => "Не готов",
-"paused" => "Перерыв",
-"oncall" => "Разговаривает",
+"paused" => "<strong><span style='color:red'>Перерыв </span></strong>",
+"oncall" => "<strong><span style='color:blue'>Разговаривает</span></strong>",
 
 // Calls statuses
 "terminada" => "Завершено",
