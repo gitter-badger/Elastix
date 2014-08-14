@@ -377,26 +377,26 @@ class Custom_Reports{
         $result[0]['not_respond'] = $res[0];
 
         // Total night time calls (20.00-09.00)
-        $query = "SELECT COUNT(*) FROM ivr_log WHERE ((calldatetime BETWEEN ? AND ?) OR (calldatetime BETWEEN ? AND ?)) AND pressed_key = ?  AND ivr_id = ?";
+        $query = "SELECT COUNT(DISTINCT call_id) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND pressed_key = ?  AND ivr_id = ?";
         $params = array(
             date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 00:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 09:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 20:00:00")),
             date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 23:59:59")),
             's',
             '4'  // 4 id ночного ivr
         );
+
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
         $result[0]['total_night'] = $res[0];
 
         // Mondeal "night time"(20.00-09.00)
-        $query = "SELECT COUNT(*) FROM ivr_log WHERE ((calldatetime BETWEEN ? AND ?) OR (calldatetime BETWEEN ? AND ?)) AND pressed_key = ?  AND ivr_id = ?";
+        $query = "SELECT COUNT(*) FROM ivr_log WHERE ((hour(calldatetime) BETWEEN ? AND ?) OR (hour(calldatetime) BETWEEN ? AND ?)) AND calldatetime BETWEEN ? AND ? AND pressed_key = ?  AND ivr_id = ?";
         $params = array(
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 00:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 09:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 20:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 23:59:59")),
-            's',
+            0,
+            9,
+            20,
+            23,
+            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_start)))),
+            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_end)))),
             '1', // нажата "1"
             '4'  // 4 id ночного ivr
         );
@@ -404,14 +404,15 @@ class Custom_Reports{
         $result[0]['mondeal_night'] = $res[0];
 
         // Voice mail
-        $query = "SELECT COUNT(*) FROM ivr_log WHERE ((calldatetime BETWEEN ? AND ?) OR (calldatetime BETWEEN ? AND ?)) AND pressed_key = ?  AND ivr_id = ?";
+        $query = "SELECT COUNT(*) FROM ivr_log WHERE ((hour(calldatetime) BETWEEN ? AND ?) OR (hour(calldatetime) BETWEEN ? AND ?)) AND calldatetime BETWEEN ? AND ? AND pressed_key = ?  AND ivr_id = ?";
         $params = array(
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 00:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 09:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 20:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 23:59:59")),
-            's',
-            '2', // нажата "2"
+            0,
+            9,
+            20,
+            23,
+            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_start)))),
+            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_end)))),
+            '2', // нажата "1"
             '4'  // 4 id ночного ivr
         );
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
