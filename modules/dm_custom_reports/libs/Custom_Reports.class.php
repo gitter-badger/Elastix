@@ -341,90 +341,138 @@ class Custom_Reports{
         $this->date_start = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 00:00:00"));
         $this->date_end = date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 23:59:59"));
 
-        // Total incoming calls
-        $query = "SELECT COUNT(*) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND pressed_key = ?  AND (ivr_id = ? OR ivr_id = ?)";
-        $params = array($this->date_start, $this->date_end, 's', '3', '4'); // 3 и 4 id дневного и ночного ivr
+        // Total incoming calls ----------------------------------------------------------------------------------------
+        $query = "SELECT COUNT(DISTINCT call_id)
+                         FROM ivr_log
+                         WHERE
+                              (calldatetime BETWEEN ? AND ?)
+                              AND
+                               pressed_key = 's'
+                              AND
+                               (ivr_id = '3' OR ivr_id = '4')
+                               "; // 3 и 4 id дневного и ночного ivr
+        $params = array(
+            $this->date_start,
+            $this->date_end,
+
+        );
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
         $result[0]['total_in'] = $res[0];
 
-        // Total accepted calls
-        $query = "SELECT COUNT(*) FROM call_entry WHERE (datetime_init BETWEEN ? AND ?) AND status = ?  AND id_campaign = ?";
+        // Total accepted calls ----------------------------------------------------------------------------------------
+        $query = "SELECT COUNT(DISTINCT uniqueid)
+                         FROM call_entry
+                         WHERE
+                              (datetime_entry_queue BETWEEN ? AND ?)
+                              AND
+                               status = 'terminada'
+                              AND
+                               id_campaign = '1'
+                               ";
         $params = array(
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_start))." 09:00:00")),
-            date("Y-m-d H:i:s",strtotime(date("Y-m-d",strtotime($this->date_end))." 20:00:00")),
-            'terminada',
-            '1' // id очереди
+            $this->date_start,
+            $this->date_end,
         );
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
         $result[0]['total_accept'] = $res[0];
 
-        // Left while IVR on
-        $query = "SELECT COUNT(*) FROM
-                                  (SELECT call_id, COUNT(*) FROM ivr_log WHERE (calldatetime BETWEEN ? AND ?) AND ivr_id = ? GROUP BY call_id HAVING COUNT(*) = '1')q";
-        $params = array($this->date_start, $this->date_end, '3'); // 3 id дневного ivr
+        // Left while IVR on -------------------------------------------------------------------------------------------
+        $query = "SELECT COUNT(DISTINCT call_id) FROM
+                         (SELECT call_id, COUNT(*)
+                                 FROM ivr_log
+                                 WHERE
+                                      (calldatetime BETWEEN ? AND ?)
+                                      AND
+                                       ivr_id = '3'
+                                 GROUP BY call_id HAVING COUNT(*) = '1')q
+                                 ";
+        $params = array(
+            $this->date_start,
+            $this->date_end
+        );
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
         $result[0]['left_ivr'] = $res[0];
 
-        // Not responded
-        $query = "SELECT COUNT(*) FROM call_entry WHERE (datetime_entry_queue BETWEEN ? AND ?) AND status = ?  AND id_campaign = ?";
+        // Not responded -----------------------------------------------------------------------------------------------
+        $query = "SELECT COUNT(DISTINCT uniqueid)
+                         FROM call_entry
+                         WHERE
+                              (datetime_entry_queue BETWEEN ? AND ?)
+                             AND
+                              status = 'abandonada'
+                             AND
+                              id_campaign = '1'
+                              ";
         $params = array(
             $this->date_start,
             $this->date_end,
-            'abandonada',
-            '1' // id очереди
         );
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
         $result[0]['not_respond'] = $res[0];
 
-        // Total night time calls (20.00-09.00)
-        $query = "SELECT COUNT(DISTINCT call_id) FROM ivr_log WHERE ((hour(calldatetime) BETWEEN ? AND ?) OR (hour(calldatetime) BETWEEN ? AND ?)) AND calldatetime BETWEEN ? AND ? AND pressed_key = ?  AND ivr_id = ?";
+        // Total night time calls (20.00-09.00) ------------------------------------------------------------------------
+        $query = "SELECT COUNT(DISTINCT call_id)
+                         FROM ivr_log
+                         WHERE
+                              ((hour(calldatetime) BETWEEN '0' AND '9') OR (hour(calldatetime) BETWEEN '20' AND '23'))
+                             AND
+                              calldatetime BETWEEN ? AND ?
+                             AND
+                              pressed_key = 's'
+                             AND
+                              ivr_id = '4'
+                              ";
         $params = array(
-            0,
-            9,
-            20,
-            23,
-            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_start)))),
-            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_end)))),
-            's',
-            '4'  // 4 id ночного ivr
+            $this->date_start,
+            $this->date_end
         );
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
         $result[0]['total_night'] = $res[0];
 
-        // Mondeal "night time"(20.00-09.00)
-        $query = "SELECT COUNT(DISTINCT call_id) FROM ivr_log WHERE ((hour(calldatetime) BETWEEN ? AND ?) OR (hour(calldatetime) BETWEEN ? AND ?)) AND calldatetime BETWEEN ? AND ? AND pressed_key = ?  AND ivr_id = ?";
+        // Mondeal "night time"(20.00-09.00) ---------------------------------------------------------------------------
+        $query = "SELECT COUNT(DISTINCT call_id)
+                         FROM ivr_log
+                         WHERE
+                             ((hour(calldatetime) BETWEEN '0' AND '9') OR (hour(calldatetime) BETWEEN '20' AND '23'))
+                            AND
+                             calldatetime BETWEEN ? AND ?
+                            AND
+                             pressed_key = '1'
+                            AND
+                             ivr_id = '4'
+                             ";
         $params = array(
-            0,
-            9,
-            20,
-            23,
-            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_start)))),
-            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_end)))),
-            '1', // нажата "1"
-            '4'  // 4 id ночного ivr
+            $this->date_start,
+            $this->date_end
         );
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
         $result[0]['mondeal_night'] = $res[0];
 
-        // Voice mail
-        $query = "SELECT COUNT(DISTINCT call_id) FROM ivr_log WHERE ((hour(calldatetime) BETWEEN ? AND ?) OR (hour(calldatetime) BETWEEN ? AND ?)) AND calldatetime BETWEEN ? AND ? AND pressed_key = ?  AND ivr_id = ?";
+        // Voice mail --------------------------------------------------------------------------------------------------
+        $query = "SELECT COUNT(DISTINCT call_id)
+                         FROM ivr_log
+                         WHERE
+                              ((hour(calldatetime) BETWEEN '0' AND '9') OR (hour(calldatetime) BETWEEN '20' AND '23'))
+                             AND
+                              calldatetime BETWEEN ? AND ?
+                             AND
+                              pressed_key = '2'
+                             AND
+                              ivr_id = '4'
+                              ";
         $params = array(
-            0,
-            9,
-            20,
-            23,
-            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_start)))),
-            date("Y-m-d",strtotime(date("Y-m-d",strtotime($this->date_end)))),
-            '2', // нажата "1"
-            '4'  // 4 id ночного ivr
+            $this->date_start,
+            $this->date_end
         );
         $res = $this->_DB->getFirstRowQuery($query,false, $params);
         $result[0]['voice_mail'] = $res[0];
 
-        // Night time calls (20.00-09.00)
+        // Night time calls (20.00-09.00) ------------------------------------------------------------------------------
         $result[0]['time_calls'] = $result[0]['total_night'] - ($result[0]['mondeal_night'] + $result[0]['voice_mail']);
 
-        // А теперь посчитаем проценты
+
+
+        // А теперь посчитаем проценты ---------------------------------------------------------------------------------
         $result[1]['total_in'] = '100%';
 
         $result[1]['total_accept'] = ($result[0]['total_accept'] / $result[0]['total_in']) * 100;
